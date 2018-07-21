@@ -1,10 +1,9 @@
 import cv2
 import numpy as np
+import os
 
-
-frame = cv2.imread('C:/Users/Steven Liu/Documents/Projects/Development/Python/opencv/line detection/yinput.jpg')
+frame = cv2.imread(os.path.join(os.path.dirname(__file__), 'yinput.png'))
 hsv=cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-print(hsv.dtype)
 overmask=0;
 
 # For each color...
@@ -100,7 +99,6 @@ for c,i in enumerate(colors):
             if np.abs((lcontA-ellipseArea)/ellipseArea) < 0.02:
                 shapeID="Circle"
                 shapeIdentified=True;
-                print(lcontA)
     
     # Color filtering
     if shapeIdentified:
@@ -112,8 +110,8 @@ for c,i in enumerate(colors):
             colorID="Red"
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-cv2.putText(frame,shapeID,(10,200), font, 2,(0,0,0),2,cv2.LINE_AA)
-cv2.putText(frame,colorID,(10,300), font, 2,(0,0,0),2,cv2.LINE_AA)
+cv2.putText(frame,shapeID,(10,200), font, 2,(255,0,0),2,cv2.LINE_AA)
+cv2.putText(frame,colorID,(10,300), font, 2,(255,0,0),2,cv2.LINE_AA)
 
 cv2.imshow('frame',frame)
 
