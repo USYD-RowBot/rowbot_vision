@@ -33,6 +33,11 @@ while(1):
     _, frame = cap.read()
     
     hsv=cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+    
+    clahe=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
+    hsv[:,:,1]=clahe.apply(hsv[:,:,1])
+    frame=cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
+    
     # get the hue channel again without dividing
     fullh=(hsv[:,:,0]).astype(int)
     # shift the colours by 180/12 so the red bins end up together
@@ -41,6 +46,7 @@ while(1):
     fullh%=180;
     hsv[:,:,0]=fullh*1.0;
 
+    
     # create trackbars for color change
     mask = cv2.inRange(hsv, lowerRange, upperRange)
     res = cv2.bitwise_and(frame,frame, mask= mask)
@@ -58,3 +64,4 @@ while(1):
     
 cap.release()
 cv2.destroyAllWindows()
+
