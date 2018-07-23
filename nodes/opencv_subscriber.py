@@ -59,9 +59,9 @@ def getFromFrame(frame):
     valTop=255;
     valBottom=0;
     colors=[
-        (np.array([0,satBottom,valBottom]),np.array([60,satTop,valTop])), # red
-        (np.array([60,satBottom,valBottom]),np.array([120,satTop,valTop])),  # green
-        (np.array([120,satBottom,valBottom]),np.array([180,255,255])),  # blue
+        (np.array([0,satBottom,valBottom]),np.array([20,satTop,valTop])), # red
+        (np.array([50,satBottom,valBottom]),np.array([95,satTop,valTop])),  # green
+        (np.array([106,satBottom,valBottom]),np.array([125,satTop,valTop])),  # blue
     ]
 
     for c,i in enumerate(colors):
