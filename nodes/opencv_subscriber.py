@@ -14,14 +14,13 @@ class image_converter:
         self.image_sub = rospy.Subscriber("camera/image_raw",Image, self.callback)
     def callback(self,data):
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         except CvBridgeError as e:
             print(e)
-        return_image = light_beacon_finder(cv_image)
+        return_image = getFromFrame(frame);
 
         cv2.imshow("Image window", return_image)
         cv2.waitKey(3)
-
         try:
           self.image_pub.publish(self.bridge.cv2_to_imgmsg(return_image, "bgr8"))
         except CvBridgeError as e:
@@ -34,46 +33,70 @@ def main(args):
   except KeyboardInterrupt:
     print("Shutting down")
   cv2.destroyAllWindows()
-def light_beacon_finder(frame):
-    p=0;# previous frame
-    preAbsSum=10000;
-    t=0; # frame numbe
-    hsv=cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # Isolate and subtract the colour channel
 
-    h=hsv[:,:,0]/180
-    cv2.imshow('frame',frame);
-    # cv2.imshow('hue',h);
-    #cv2.imshow('delta',np.abs(p-h));
-    if np.sum(np.abs(p-h))>preAbsSum*10:
-        print(np.sum(np.abs(p-h)),preAbsSum,t)
-        # get the hue channel again without dividing
-        fullh=(hsv[:,:,0]).astype(int)
-        # shift the colours by 180/12 so the red bins end up together
-        fullh+=int(180/12);
-        # loop the values back to within  0 - 180
-        fullh%=180;
-        # Only consider areas where the delta is greater than some threshold.
-        threshold=np.mean(np.abs(p-h));
-        renormalisationFactor=0.05;
-        deltaMask=((np.abs(p-h)-np.clip(np.abs(p-h),threshold,None))/renormalisationFactor+renormalisationFactor)/renormalisationFactor # returns negative values if delta is smaller than the threshold; 1 otherwise
-        # cv2.imshow('dm',deltaMask);
-        fullh=deltaMask*fullh
-        print(fullh.max())
-        # run a histogram of the colours to determine the dominant colour.
-        n,d=np.histogram(fullh,bins=6,range=(0,fullh.max()))
-        maxColNum=np.argmax(n)
-        maxColCenter=(d[maxColNum]+d[maxColNum+1])/2;
-        if (maxColCenter<180/3): print('red');
-        elif (maxColCenter<180/2): print('green');
-        else: print('blue');
-        print(maxColCenter)
-    preAbsSum=np.sum(np.abs(p-h))
-    p=hsv[:,:,0]/180
-    return hsv
-    #k = cv2.waitKey(5) & 0xFF
-    #if k == 27:
-        #break
 
 if __name__ == '__main__':
     main(sys.argv)
+
+def getFromFrame(frame):
+    hsv=cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+    overmask=0;
+
+    # get the hue channel
+    fullh=(hsv[:,:,0]).astype(int)
+    # shift the colours by 180/12 so the red bins end up together
+    fullh+=int(180/12);
+    # loop the values back to within  0 - 180
+    fullh%=180;
+    # reinsert into hsv -- for future refinement
+    hsv[:,:,0]=fullh*1.0;
+    shapeID="none"
+    colorID="none"
+
+    # For each color...
+    satTop=255;
+    satBottom=67;
+    valTop=255;
+    valBottom=0;
+    colors=[
+        (np.array([0,satBottom,valBottom]),np.array([60,satTop,valTop])), # red
+        (np.array([60,satBottom,valBottom]),np.array([120,satTop,valTop])),  # green
+        (np.array([120,satBottom,valBottom]),np.array([180,255,255])),  # blue
+    ]
+
+    for c,i in enumerate(colors):
+        # define range of color in HSV
+        lowerRange = i[0]
+        upperRange = i[1]
+        shapeIdentified=False;
+        # Threshold the HSV image to get only desired colors
+        mask = cv2.inRange(hsv, lowerRange, upperRange)
+        # check if there is a circle
+        image, contours, hierarchy = cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+
+        # Get largest contour
+        if not (contours is None or len(contours)<1):
+            for d,i in enumerate(contours):
+                if (len(i)>5):
+                    x,y,w,h = cv2.boundingRect(i)
+                    rectArea=w*h;
+                    if np.abs((cv2.contourArea(i)-rectArea)/rectArea) < 0.02 and h>w:
+                        cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                        shapeID="Rectangle"
+                        shapeIdentified=True;
+        if c==0:
+            ret=cv2.bitwise_and(frame,frame,mask=mask);
+            cv2.imshow('mask',ret)    
+        # Color filtering
+        if shapeIdentified:
+            if c==0:
+                colorID="red"    
+            elif c==1:
+                colorID="Green"
+            else:
+                colorID="blue"
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(frame,shapeID,(10,200), font, 2,(255,0,0),2,cv2.LINE_AA)
+    cv2.putText(frame,colorID,(10,300), font, 2,(255,0,0),2,cv2.LINE_AA)
+    return frame
