@@ -39,7 +39,12 @@ if __name__ == '__main__':
     main(sys.argv)
 
 def getFromFrame(frame):
-    hsv=cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+    equ=np.copy(frame);
+    for i in range(0,3):
+        equ[:,:,i] = cv2.equalizeHist(equ[:,:,i])
+    ret = 0
+    hsv=cv2.cvtColor(equ,cv2.COLOR_BGR2HSV)
+    
     overmask=0;
 
     # get the hue channel
@@ -52,26 +57,39 @@ def getFromFrame(frame):
     hsv[:,:,0]=fullh*1.0;
     shapeID="none"
     colorID="none"
-
+    
+    
+    
+    #Perform equalisation on frame
+    #hsv[:,:,0] = cv2.equalizeHist(hsv[:,:,0])
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    hsv[:,:,0] = clahe.apply(hsv[:,:,0])
+        
     # For each color...
     satTop=255;
     satBottom=67;
     valTop=255;
-    valBottom=0;
+    valBottom=100;
     colors=[
-        (np.array([0,satBottom,valBottom]),np.array([60,satTop,valTop])), # red
-        (np.array([60,satBottom,valBottom]),np.array([120,satTop,valTop])),  # green
-        (np.array([120,satBottom,valBottom]),np.array([180,255,255])),  # blue
+        (np.array([0,satBottom,valBottom]),np.array([20,satTop,valTop])), # red
+        (np.array([50,satBottom,valBottom]),np.array([95,satTop,valTop])),  # green
+        (np.array([106,satBottom,valBottom]),np.array([125,satTop,valTop])),  # blue
     ]
-
+    font = cv2.FONT_HERSHEY_SIMPLEX
     for c,i in enumerate(colors):
+        if c==0:
+            colorID="red"    
+        elif c==1:
+            colorID="Green"
+        else:
+            colorID="blue"
         # define range of color in HSV
         lowerRange = i[0]
         upperRange = i[1]
         shapeIdentified=False;
         # Threshold the HSV image to get only desired colors
         mask = cv2.inRange(hsv, lowerRange, upperRange)
-        # check if there is a circle
+        # contour detection
         image, contours, hierarchy = cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
         # Get largest contour
@@ -80,23 +98,15 @@ def getFromFrame(frame):
                 if (len(i)>5):
                     x,y,w,h = cv2.boundingRect(i)
                     rectArea=w*h;
-                    if np.abs((cv2.contourArea(i)-rectArea)/rectArea) < 0.02 and h>w:
+                    cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                    if np.abs((cv2.contourArea(i)-rectArea)/rectArea) < 0.2 and h>w:
                         cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                        cv2.putText(frame,colorID,(x,y), font, 0.5,(255,0,0),2,cv2.LINE_AA)
                         shapeID="Rectangle"
                         shapeIdentified=True;
-        if c==0:
-            ret=cv2.bitwise_and(frame,frame,mask=mask);
-            cv2.imshow('mask',ret)    
+            
         # Color filtering
-        if shapeIdentified:
-            if c==0:
-                colorID="red"    
-            elif c==1:
-                colorID="Green"
-            else:
-                colorID="blue"
-
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(frame,shapeID,(10,200), font, 2,(255,0,0),2,cv2.LINE_AA)
-    cv2.putText(frame,colorID,(10,300), font, 2,(255,0,0),2,cv2.LINE_AA)
+            
+        if c==0: cv2.imshow('mask',mask)
+    
     return frame
