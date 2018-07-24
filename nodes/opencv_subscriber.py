@@ -6,6 +6,10 @@ import numpy as np
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+import sys
+from shape.shape import identify
+from shape_test import get_shape
+
 
 
 def getFromFrame(frame):
@@ -59,7 +63,7 @@ def getFromFrame(frame):
         shapeIdentified=False;
         # Threshold the HSV image to get only desired colors
         mask = cv2.inRange(hsv, lowerRange, upperRange)
-        
+
         # contour detection
         image, contours, hierarchy = cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
@@ -98,16 +102,18 @@ class image_converter:
             frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         except CvBridgeError as e:
             print(e)
-        return_image = getFromFrame(frame);
+        return_image = get_shape(frame);
 
         #cv2.imshow("Image window", return_image)
         try:
-          self.image_pub.publish(self.bridge.cv2_to_imgmsg(return_image, "bgr8"))
+
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(return_image, "bgr8"))
         except CvBridgeError as e:
           print(e)
 def main(args):
-  ic = image_converter()
   rospy.init_node('image_converter', anonymous=True)
+
+  ic = image_converter()
   try:
     rospy.spin()
   except KeyboardInterrupt:
