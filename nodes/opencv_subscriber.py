@@ -14,7 +14,7 @@ def getFromFrame(frame):
         equ[:,:,i] = cv2.equalizeHist(equ[:,:,i])
     ret = 0
     hsv=cv2.cvtColor(equ,cv2.COLOR_BGR2HSV)
-    
+
     overmask=0;
 
     # get the hue channel
@@ -27,14 +27,14 @@ def getFromFrame(frame):
     hsv[:,:,0]=fullh*1.0;
     shapeID="none"
     colorID="none"
-    
-    
-    
+
+
+
     #Perform equalisation on frame
     #hsv[:,:,0] = cv2.equalizeHist(hsv[:,:,0])
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
     hsv[:,:,0] = clahe.apply(hsv[:,:,0])
-        
+
     # For each color...
     satTop=255;
     satBottom=67;
@@ -48,7 +48,7 @@ def getFromFrame(frame):
     font = cv2.FONT_HERSHEY_SIMPLEX
     for c,i in enumerate(colors):
         if c==0:
-            colorID="red"    
+            colorID="red"
         elif c==1:
             colorID="Green"
         else:
@@ -59,6 +59,7 @@ def getFromFrame(frame):
         shapeIdentified=False;
         # Threshold the HSV image to get only desired colors
         mask = cv2.inRange(hsv, lowerRange, upperRange)
+        
         # contour detection
         image, contours, hierarchy = cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
@@ -76,7 +77,7 @@ def getFromFrame(frame):
                         shapeIdentified=True;
         if shapeIdentified:
             if c==0:
-                colorID="red"    
+                colorID="red"
             elif c==1:
                 colorID="Green"
             else:
@@ -99,8 +100,7 @@ class image_converter:
             print(e)
         return_image = getFromFrame(frame);
 
-        cv2.imshow("Image window", return_image)
-        cv2.waitKey(3)
+        #cv2.imshow("Image window", return_image)
         try:
           self.image_pub.publish(self.bridge.cv2_to_imgmsg(return_image, "bgr8"))
         except CvBridgeError as e:
@@ -117,12 +117,3 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv)
-
-
- 
-=======
-            
-        if c==0: cv2.imshow('mask',mask)
-    
-    return frame
->>>>>>> 779416a18aaee2311109fdfd9c064426d0d657b0
