@@ -188,7 +188,7 @@ def identify(frame):
         #if numProcessed==1: cv2.imshow('m',mask);
     allIDs=sorted(allIDs,key=lambda i: (i[5]**0.01)*(i[4]**0.5), reverse=True)
     return allIDs
-        
+
 def wrapper():
     
     # For each color...
