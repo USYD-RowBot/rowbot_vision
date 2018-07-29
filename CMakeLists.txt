@@ -165,8 +165,10 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-catkin_install_python(PROGRAMS nodes/opencv_subscriber.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+catkin_install_python(
+	PROGRAMS nodes/rosIO.py
+  	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 
 ## Mark executables and/or libraries for installation
