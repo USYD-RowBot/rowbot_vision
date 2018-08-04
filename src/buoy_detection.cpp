@@ -2,15 +2,15 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <cv.h>
-#include <highgui.h>
-#include <cxcore.h>
+//#include <cv.h>
+//#include <highgui.h>
+//#include <cxcore.h>
 
 #include <vector>
 #include <iostream>
-#include "math.h"
+//#include "math.h"
 
-#include "enums.h"
+//#include "enums.h"
 #include "input.hpp"
 #include "ShapeDetector.hpp"
 #include "ColourExtractor.hpp"
