@@ -39,6 +39,7 @@ int main(int argc, char* argv[]) {
     } else if (argc == 2) {
         std::string fileName = argv[1];
         image = getImage(fileName);
+        //cv::resize(image, image, cv::Size(), 0.50, 0.50);
         if (!image.data) {
             std::cout << "ERROR: Could not open or find image" << std::endl;
             return -1;
@@ -74,7 +75,7 @@ int main(int argc, char* argv[]) {
             sd.detectContours();
             sd.detectShapes();
             sd.printObjects();
-            sd.drawOutput(image, true);
+            sd.drawOutput(image, false);
             //sd.detectHoughCircles(true);
             //sd.drawHoughCircles(image);
 

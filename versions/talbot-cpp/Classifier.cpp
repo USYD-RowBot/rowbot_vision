@@ -2,19 +2,19 @@
 #include "Classifier.hpp"
 
 //// Types with their multMatrix position:
-// obstacle_buoy (navy or black, circular, small or large) (0, 0) & (0, 4)
-// white_post (1, 3)
-// white_log (2, 3)
-// white_buoy (0, 3)
-// red_post (1, 1)
-// green_post (1, 2)
-// blue_post (1, 5)
-// yellow_post (1, 6)
+// obstacle_buoy (black, circular, small or large) (0, 3)
+// white_post (1, 2)
+// white_log (2, 2)
+// white_buoy (0, 2)
+// red_post (1, 0)
+// green_post (1, 1)
+// blue_post (1, 4)
+// yellow_post (1, 5)
 
 Object Classifier::classify(std::string shape_name, cv::Rect boundingRect, Colour colour) {
     // Establish shape confidence. shape_confs has order of
     // sphere confidence, post confidence, log confidence
-    std::array<float, 3> shape_confs = {0.34, 0.33, 0.33};
+    std::array<float, 3> shape_confs = {0.2, 0.2, 0.2};
     float heightToWidth = static_cast<float>(boundingRect.height/boundingRect.width);
     if (shape_name == "circle") {
         if (heightToWidth <= 1.11 && heightToWidth >= 0.9) {
@@ -36,14 +36,6 @@ Object Classifier::classify(std::string shape_name, cv::Rect boundingRect, Colou
         } else if (heightToWidth < 0.5) {
             shape_confs = {0.5, 0, 0.5};
         }
-    } else if (shape_name == "square") {
-        if (heightToWidth > 1.053) {
-            shape_confs = {0.9, 0.1, 0};
-        } else if (heightToWidth < 0.95) {
-            shape_confs = {0.9, 0, 0.1};
-        } else {
-            shape_confs = {0.9, 0.05, 0.05};
-        }
     } else if (shape_name == "rectangle") {
         if (heightToWidth >= 4) {
             shape_confs = {0.05, 0.95, 0};
@@ -55,43 +47,48 @@ Object Classifier::classify(std::string shape_name, cv::Rect boundingRect, Colou
             shape_confs = {0.15, 0.85, 0};
         } else if (heightToWidth >= 2) {
             shape_confs = {0.2, 0.80, 0};
-        } else if (heightToWidth <= 0.5) {
-            shape_confs = {0.2, 0, 0.80};
-        } else if (heightToWidth <= 0.4) {
-            shape_confs = {0.15, 0, 0.85};
-        } else if (heightToWidth <= 0.33) {
-            shape_confs = {0.1, 0, 0.90};
-        } else if (heightToWidth <= 0.285) {
-            shape_confs = {0.08, 0, 0.92};
+        } else if (heightToWidth >= 1.5) {
+            shape_confs = {0.25, 0.75, 0};
+        } else if (heightToWidth >= 1.25) {
+            shape_confs = {0.5, 0.75, 0};
         } else if (heightToWidth <= 0.25) {
             shape_confs = {0.05, 0, 0.95};
+        } else if (heightToWidth <= 0.285) {
+            shape_confs = {0.08, 0, 0.92};
+        } else if (heightToWidth <= 0.33) {
+            shape_confs = {0.1, 0, 0.90};
+        } else if (heightToWidth <= 0.4) {
+            shape_confs = {0.15, 0, 0.85};
+        } else if (heightToWidth <= 0.5) {
+            shape_confs = {0.2, 0, 0.80};
+        } else if (heightToWidth <= 0.67) {
+            shape_confs = {0.25, 0, 0.75};
+        } else if (heightToWidth <= 0.8) {
+            shape_confs = {0.5, 0, 0.75};
         }
     }
 
     // Establish colour confidence. colour_confs has order:
-    // NAVY, RED, GREEN, WHITE, BLACK, BLUE, YELLOW
-    std::array<float, 7> colour_confs = {0.15, 0.15, 0.14, 0.14, 0.14, 0.14, 0.14};
+    // RED, GREEN, WHITE, BLACK, BLUE, YELLOW
+    std::array<float, 6> colour_confs = {0.25, 0.25, 0.25, 0.25, 0.25, 0.25};
     switch (colour) {
-        case NAVY:
-            colour_confs = {0.75, 0, 0.05, 0, 0.10, 0.10, 0};
-            break;
         case RED:
-            colour_confs = {0.01, 0.94, 0.01, 0.01, 0.01, 0.01, 0.01};
+            colour_confs = {0.95, 0, 0, 0.30, 0, 0};
             break;
         case GREEN:
-            colour_confs = {0.08, 0, 0.75, 0, 0.09, 0.08, 0};
+            colour_confs = {0, 0.75, 0, 0.09, 0.08, 0};
             break;
         case WHITE:
-            colour_confs = {0, 0, 0, 0.9, 0, 0, 0.1};
+            colour_confs = {0, 0, 0.9, 0, 0, 0.30};
             break;
         case BLACK:
-            colour_confs = {0.1, 0, 0.1, 0, 0.75, 0.05, 0};
+            colour_confs = {0, 0.1, 0, 0.75, 0.05, 0};
             break;
         case BLUE:
-            colour_confs = {0.1, 0, 0.1, 0, 0.05, 0.75, 0};
+            colour_confs = {0, 0.30, 0, 0.20, 0.70, 0};
             break;
         case YELLOW:
-            colour_confs = {0, 0, 0, 0.1, 0, 0, 0.9};
+            colour_confs = {0, 0, 0.30, 0, 0, 0.60};
             break;
         case NUM_COLOURS:
             // fall through
@@ -102,7 +99,7 @@ Object Classifier::classify(std::string shape_name, cv::Rect boundingRect, Colou
     }
 
     // Create multiplication matrix
-    std::array<std::array<float, 7>, 3> multMatrix;
+    std::array<std::array<float, 6>, 3> multMatrix;
     for (int row = 0; row < multMatrix.size(); ++row) {
         for (int col = 0; col < multMatrix[0].size(); ++col) {
             multMatrix[row][col] = shape_confs[row]*colour_confs[col];
@@ -114,33 +111,38 @@ Object Classifier::classify(std::string shape_name, cv::Rect boundingRect, Colou
     std::vector<float> confidences;
 
     // Choose those above 5% that are also applicable objects
-    if (multMatrix[0][0] >= 0.05) {
+    float threshold{0.05};
+    if (multMatrix[0][3] >= threshold) {
         types.push_back("obstacle_buoy");
-        confidences.push_back(multMatrix[0][0]);
-    } else if (multMatrix[0][4] >= 0.05) {
-        types.push_back("obstacle_buoy");
-        confidences.push_back(multMatrix[0][4]);
-    } else if (multMatrix[1][3] >= 0.05) {
-        types.push_back("white_post");
-        confidences.push_back(multMatrix[1][3]);
-    } else if (multMatrix[2][3] >= 0.05) {
-        types.push_back("white_log");
-        confidences.push_back(multMatrix[2][3]);
-    } else if (multMatrix[0][3] >= 0.05) {
-        types.push_back("white_buoy");
         confidences.push_back(multMatrix[0][3]);
-    } else if (multMatrix[1][1] >= 0.05) {
-        types.push_back("red_post");
-        confidences.push_back(multMatrix[1][1]);
-    } else if (multMatrix[1][2] >= 0.05) {
-        types.push_back("green_post");
+    }
+    if (multMatrix[1][2] >= threshold) {
+        types.push_back("white_post");
         confidences.push_back(multMatrix[1][2]);
-    } else if (multMatrix[1][5] >= 0.05) {
+    }
+    if (multMatrix[2][2] >= threshold) {
+        types.push_back("white_log");
+        confidences.push_back(multMatrix[2][2]);
+    }
+    if (multMatrix[0][2] >= threshold) {
+        types.push_back("white_buoy");
+        confidences.push_back(multMatrix[0][2]);
+    }
+    if (multMatrix[1][0] >= threshold) {
+        types.push_back("red_post");
+        confidences.push_back(multMatrix[1][0]);
+    }
+    if (multMatrix[1][1] >= threshold) {
+        types.push_back("green_post");
+        confidences.push_back(multMatrix[1][1]);
+    }
+    if (multMatrix[1][4] >= threshold) {
         types.push_back("blue_post");
-        confidences.push_back(multMatrix[1][5]);
-    } else if (multMatrix[1][6] >= 0.05) {
+        confidences.push_back(multMatrix[1][4]);
+    }
+    if (multMatrix[1][5] >= threshold) {
         types.push_back("yellow_post");
-        confidences.push_back(multMatrix[1][6]);
+        confidences.push_back(multMatrix[1][5]);
     }
 
     // Return the object
@@ -152,7 +154,7 @@ float Classifier::bearing(cv::Point2f center) {
 }
 
 float Classifier::range(cv::Point2f center) {
-    return m_imageHeight - center.y;
+    return (m_imageHeight - center.y)/m_imageHeight;
 }
 
 void Classifier::classifyAndLocate(std::string shape_name, cv::Rect boundingRect, Colour colour, cv::Point2f center) {

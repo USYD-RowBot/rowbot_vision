@@ -18,6 +18,9 @@ public:
     void setBearing(float bearing);
     void setRange(float range);
     void print() const;
+    float getMaxConfidence() const;
+    float getBearing() const;
+    float getRange() const;
 };
 
 #endif
