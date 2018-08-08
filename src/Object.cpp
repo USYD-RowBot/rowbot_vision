@@ -17,3 +17,21 @@ void Object::print() const {
         std::cout << 100*m_confidences[i] << "% confidence" << std::endl;
     }
 }
+
+float Object::getMaxConfidence() const {
+    float maxConfidence = -1;
+    for (int i = 0; i < m_confidences.size(); ++i) {
+        if (m_confidences[i] > maxConfidence) {
+            maxConfidence = m_confidences[i];
+        }
+    }
+    return maxConfidence; // -1 if empty confidences
+}
+
+float Object::getBearing() const {
+    return m_bearing;
+}
+
+float Object::getRange() const {
+    return m_range;
+}

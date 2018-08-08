@@ -5,9 +5,10 @@
 #include <vector>
 
 class Object {
-private:
+public:
     std::vector<std::string> m_types;
     std::vector<float> m_confidences;
+private:
     float m_bearing; // angle based on pixel position on screen
     float m_range;
 
@@ -18,6 +19,9 @@ public:
     void setBearing(float bearing);
     void setRange(float range);
     void print() const;
+    float getMaxConfidence() const;
+    float getBearing() const;
+    float getRange() const;
 };
 
 #endif

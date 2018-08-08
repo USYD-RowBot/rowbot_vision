@@ -21,10 +21,6 @@ cv::Mat ColourExtractor::extract(cv::Mat hsv_image, Colour colour, bool displayA
 
     // assign min and max according to colour specified
     switch (colour) {
-        case NAVY:
-            hsv_min = m_hsvMinNavy;
-            hsv_max = m_hsvMaxNavy;
-            break;
         case RED:
             hsv_min = m_hsvMinRed;
             hsv_max = m_hsvMaxRed;

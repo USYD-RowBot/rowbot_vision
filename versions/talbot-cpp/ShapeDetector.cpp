@@ -33,15 +33,11 @@ void ShapeDetector::detectShapes() {
         cv::minEnclosingCircle(cv::Mat(approx), center, radius);
 
         // Identify the approximate shape
-        float sidesRatio = boundRect.width/boundRect.height;
-        if (approx.size() == 4 || sidesRatio < 0.5 || sidesRatio > 2) {
-            if (sidesRatio > 0.90 && sidesRatio < 1.10) {
-                shape = "square";
-            } else {
-                shape = "rectangle";
-            }
-        } else if (approx.size() > 4) {
+        float sidesRatio = (float)boundRect.width/(float)boundRect.height;
+        if (sidesRatio > 0.90 && sidesRatio < 1.11) {
             shape = "circle";
+        } else {
+            shape = "rectangle";
         }
         if (radius > m_minRad && (boundRect.width > m_minDims || boundRect.height > m_minDims)) {
             m_shapes.push_back(approx);
@@ -81,9 +77,7 @@ void ShapeDetector::drawContours(cv::Mat underlay) {
 void ShapeDetector::drawShapes(cv::Mat underlay) {
     // select colour
     cv::Scalar colour;
-    if (m_tag == NAVY) {
-        colour = cv::Scalar(255, 0, 0);
-    } else if (m_tag == RED) {
+    if (m_tag == RED) {
         colour = cv::Scalar(0, 0, 150);
     } else if (m_tag == GREEN) {
         colour = cv::Scalar(0, 175, 0);
@@ -139,9 +133,6 @@ void ShapeDetector::drawHoughCircles(cv::Mat underlay) {
 
 std::string ShapeDetector::getColourStr() const {
     switch(m_tag) {
-        case NAVY:
-            return "navy";
-            break;
         case RED:
             return "red";
             break;
@@ -174,7 +165,7 @@ void ShapeDetector::removeDuplicateShapes() {
     cv::Point2f center;
     float radius;
     float radius_ratio;
-    float epsilon_position{1.0}; // within 2 pixels
+    float epsilon_position{3.0}; // within 3 pixels
     float epsilon_radius_percentage{0.10}; // 10% either side
     if (m_shapes.size() > 0) {
         for (int i = 0; i < m_shapes.size()-1; ++i) {
@@ -204,7 +195,7 @@ void ShapeDetector::printObjects() const {
         std::cout << " detected at (" << m_centers[i].x << ", " << m_centers[i].y;
         std::cout << ")";// << " with " << approx.size() << " sides";
         if (m_shape_names[i] == "circle") {
-            std::cout << " (radius=" << m_radii[i] << ")" << std::endl;
+            std::cout << " (radius=" << m_radii[i] << ", height=" <<  m_boundRects[i].height << ", width=" << m_boundRects[i].width << ")" << std::endl;
         } else {
             std::cout << " (height=" << m_boundRects[i].height;
             std::cout << ", width=" << m_boundRects[i].width << ")" << std::endl;

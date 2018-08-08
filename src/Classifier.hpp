@@ -15,15 +15,17 @@
 
 class Classifier {
 private:
-    std::vector<Object> m_objects;
+
     float m_fov;
     float m_imageWidth;
     float m_imageHeight;
 
 public:
+    std::vector<Object> m_objects;
     Classifier(float cameraFOV, float imageWidth, float imageHeight)
     : m_fov{cameraFOV}, m_imageWidth{imageWidth}, m_imageHeight{imageHeight}
     {};
+
     Object classify(std::string shape_name, cv::Rect boundingRect, Colour colour);
     float bearing(cv::Point2f center);
     float range(cv::Point2f center);

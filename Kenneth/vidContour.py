@@ -304,26 +304,27 @@ class LightPattern():
         cv2.putText(frame, "Sequence: " + pattern, (100,100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         return frame
 
-cap = cv2.VideoCapture(1)
-cap.set(3,640)
-cap.set(4,480)
+if __name__ == "__main__":
+    cap = cv2.VideoCapture(1)
+    cap.set(3,640)
+    cap.set(4,480)
 
-pattern = ""
-counter = 0
-tempPattern = ""
-samecolFlag = 0
-timeStarted = 0
-lightpattern = LightPattern()
+    pattern = ""
+    counter = 0
+    tempPattern = ""
+    samecolFlag = 0
+    timeStarted = 0
+    lightpattern = LightPattern()
 
-while True:
+    while True:
 
-    # Capture a frame of the video
-    _,frame = cap.read()
-    result = lightpattern.getPattern(frame)
+        # Capture a frame of the video
+        _,frame = cap.read()
+        result = lightpattern.getPattern(frame)
 
-    # Display the captured frame
-    cv2.imshow("Frame", result)
-    tempPattern = pattern
+        # Display the captured frame
+        cv2.imshow("Frame", result)
+        tempPattern = pattern
 
 
 

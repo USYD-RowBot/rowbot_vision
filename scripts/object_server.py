@@ -11,10 +11,11 @@ import math
 import random
 from qhull_2d import *
 from min_bounding_rect import *
-import ClassifyServer
+import ImageServer
 
+M_PI = 3.14159265359
 class Obstacle():
-    def __init__(self,tf_broadcaster,tf_listener,classify_server):
+    def __init__(self,tf_broadcaster,tf_listener,image_server):
         self.x = 0
         self.y = 0
         self.time = rospy.Time.now()
@@ -26,7 +27,8 @@ class Obstacle():
         self.camera_detection = ""
         self.tf_broadcaster = tf_broadcaster
         self.tf_listener = tf_listener
-        self.classify_server = classify_server
+        self.image_server = image_server
+        self.best_guess_conf = 0
     def broadcast(self):
         self.tf_broadcaster.sendTransform(
         (self.x,self.y,0),
@@ -39,34 +41,40 @@ class Obstacle():
         score_buoy = 0
         score_dock = 0
         #Try Detect by camera
-
+        types = []
         if self.radius < 1.2:
             #Try get detected by camera
             result = False
+
             try:
-                (trans,rot) = self.tf_listener.lookupTransform(self.object.frame_id,"mycamera",rospy.Time(0))
+                #If an object is in the way, don't classify it.
+                (trans,rot) = self.tf_listener.lookupTransform("front_camera_link",self.object.frame_id,rospy.Time(0))
                 euler = tf.transformations.euler_from_quaternion(rot)
-                bearing = euler[2]
-                result = self.classify_server.classify_buoy(bearing)
+                bearing= -math.degrees(math.atan2(trans[1], trans[0]))
+                #bearing = bearing_rad * 180/M_PI
+                print(self.object.frame_id , bearing,euler)
+                result = self.image_server.classify_buoy(bearing,0)
 
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pass
 
             if result == False:
-                print("Passing")
+                print("Did not get seen by camera")
                 pass
             else:
                 self.seen_by_camera = True
-                self.object.types = result[0]
-                self.object.confidences = result[1]
+                types = result[0]
+                confidences = result[1]
 
             if self.seen_by_camera == False:
-                self.object.types = ["buoy"]
-                self.object.confidences = [1]
+                types = ["buoy"]
+                confidences = [0.2]
             else:
-                #Keep it the same result
                 pass
+                #types = self.object.types
+                #confidences = self.object.confidences
+
         elif self.radius < 10:
             self.classify_dock()
             self.object.types = ["dock"]
@@ -74,11 +82,18 @@ class Obstacle():
         else :
             self.object.types = ["land"]
             self.object.confidences = [0.5]
-        print(self.object.types, self.object.confidences)
+        #print(self.object.types, self.object.confidences)
 
-        max_conf = max(self.object.confidences)
-        best = self.object.types[self.object.confidences.index(max_conf)]
-        self.object.best_guess = best
+        if (len(types) != 0):
+            max_conf = max(confidences)
+            best = types[confidences.index(max_conf)]
+            best_guess = best
+            if max_conf > self.best_guess_conf:
+                self.object.best_guess = best
+                self.object.types = types
+                self.object.confidences = confidences
+                self.best_guess_conf = max_conf
+
 
             #if indeterminiate then it could be a light bouy
     def classify_dock(self):
@@ -88,14 +103,14 @@ class Obstacle():
         points = numpy.array(self.points)
         hull_points = qhull2D(points)
         hull_points = hull_points[::-1]
-        print 'Convex hull points: \n', hull_points, "\n"
+        #print 'Convex hull points: \n', hull_points, "\n"
         (rot_angle, area, width, height, center_point, corner_points) = minBoundingRect(hull_points)
 
-        print "Minimum area bounding box:"
-        print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
-        print "Width:", width, " Height:", height, "  Area:", area
-        print "Center point: \n", center_point # numpy array
-        print "Corner points: \n", corner_points, "\n"  # numpy array
+        #print "Minimum area bounding box:"
+        #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
+        #print "Width:", width, " Height:", height, "  Area:", area
+        #print "Center point: \n", center_point # numpy array
+        #print "Corner points: \n", corner_points, "\n"  # numpy array
 
 
         #Get orientation and apply to rot
@@ -107,15 +122,36 @@ class Obstacle():
 class ObjectServer():
 
     def __init__(self):
-        self.classify_server = ClassifyServer.ClassifyServer()
+        self.image_server = ImageServer.ImageServer()
         self.tf_broadcaster = tf.TransformBroadcaster()
         self.tf_listener = tf.TransformListener()
         self.pub = rospy.Publisher("objects", ObjectArray)
         self.objects = []
 
     def classify_objects(self):
+        objInFront = False
+        my_info = {}
         for i in self.objects:
-            i.classify()
+            try:
+                (trans,rot) = self.tf_listener.lookupTransform("front_camera_link",i.object.frame_id,rospy.Time(0))
+                bearing =math.degrees(math.atan2(trans[1], trans[0]))
+                dist = math.sqrt(trans[1]**2 + trans[0]**2)
+                my_info[i] = (bearing,dist)
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                pass
+        for i in my_info:
+            (this_bearing, this_dist )= my_info[i]
+            max_bearing = this_bearing+3.5
+            min_bearing = this_bearing-3.5
+            for key in my_info:
+                if i is key:
+                    pass
+                elif my_info[key][0] > min_bearing and my_info[key][0] < max_bearing and my_info[key][1] < this_dist-0.5:
+                    objInFront = True
+                    break
+
+            if(objInFront == False):
+                i.classify()
     def broadcast_objects(self):
         #print("Publishing", self.objects)
         objectlist = ObjectArray()
@@ -217,7 +253,7 @@ class ObjectServer():
                     break
             if updated == False:
                 print("Adding new object")
-                my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.classify_server)
+                my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server)
                 my_obj.x = x
                 my_obj.y = y
                 my_obj.radius = max_dist
@@ -235,7 +271,7 @@ class ObjectServer():
 if __name__ == "__main__":
     rospy.init_node("object_server")
     object_server = ObjectServer()
-    rate = rospy.Rate(1)
+    rate = rospy.Rate(5)
     sub = rospy.Subscriber("map",OccupancyGrid,object_server.callback)
     while not rospy.is_shutdown():
         object_server.cleanup()

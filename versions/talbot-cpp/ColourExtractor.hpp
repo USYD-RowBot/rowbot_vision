@@ -19,8 +19,6 @@
 
 class ColourExtractor {
 private:
-    cv::Scalar m_hsvMinNavy = cv::Scalar(110, 0, 0, 0);
-    cv::Scalar m_hsvMaxNavy = cv::Scalar(140, 255, 100, 0);
     cv::Scalar m_hsvMinRed = cv::Scalar(0, 100, 100, 0);
     cv::Scalar m_hsvMaxRed = cv::Scalar(15, 255, 255, 0);
     cv::Scalar m_hsvMinRed2 = cv::Scalar(165, 100, 100, 0);

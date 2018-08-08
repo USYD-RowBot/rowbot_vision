@@ -2,7 +2,6 @@
 #define ENUMS
 
 enum Colour {
-    NAVY = 0,
     RED,
     GREEN,
     WHITE,

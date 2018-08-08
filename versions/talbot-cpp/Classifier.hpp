@@ -24,6 +24,7 @@ public:
     Classifier(float cameraFOV, float imageWidth, float imageHeight)
     : m_fov{cameraFOV}, m_imageWidth{imageWidth}, m_imageHeight{imageHeight}
     {};
+    
     Object classify(std::string shape_name, cv::Rect boundingRect, Colour colour);
     float bearing(cv::Point2f center);
     float range(cv::Point2f center);
