@@ -14,7 +14,9 @@ from min_bounding_rect import *
 import ImageServer
 
 M_PI = 3.14159265359
+
 class Obstacle():
+    """Obstacle Class containing information and functions for different detected Obstacles"""
     def __init__(self,tf_broadcaster,tf_listener,image_server):
         self.x = 0
         self.y = 0
@@ -30,6 +32,7 @@ class Obstacle():
         self.image_server = image_server
         self.best_guess_conf = 0
     def broadcast(self):
+        """Broadcast the object via tf"""
         self.tf_broadcaster.sendTransform(
         (self.x,self.y,0),
         self.rot,
@@ -38,29 +41,30 @@ class Obstacle():
         "map"
         )
     def classify(self):
+        """Try classify the object using a variety of means"""
+        #TODO If two objects have a similar bearing, don't classify it.
         score_buoy = 0
         score_dock = 0
-        #Try Detect by camera
         types = []
+        #If self.radius is < 1.2 then it is a buoy
+        #TODO Use rosparam to get buoy size.
         if self.radius < 1.2:
             #Try get detected by camera
             result = False
-
             try:
-                #If an object is in the way, don't classify it.
                 (trans,rot) = self.tf_listener.lookupTransform("front_camera_link",self.object.frame_id,rospy.Time(0))
                 euler = tf.transformations.euler_from_quaternion(rot)
+                #Get the bearing of the object relative to the camera
                 bearing= -math.degrees(math.atan2(trans[1], trans[0]))
-                #bearing = bearing_rad * 180/M_PI
-                print(self.object.frame_id , bearing,euler)
+                #Classify using the camera.
                 result = self.image_server.classify_buoy(bearing,0)
-
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pass
 
             if result == False:
-                print("Did not get seen by camera")
+                #Did not get seen by the camera
+                #print("Did not get seen by camera")
                 pass
             else:
                 self.seen_by_camera = True
@@ -72,8 +76,6 @@ class Obstacle():
                 confidences = [0.2]
             else:
                 pass
-                #types = self.object.types
-                #confidences = self.object.confidences
 
         elif self.radius < 10:
             self.classify_dock()
@@ -82,8 +84,10 @@ class Obstacle():
         else :
             self.object.types = ["land"]
             self.object.confidences = [0.5]
-        #print(self.object.types, self.object.confidences)
 
+        #TODO LONG TERM: Allow these settings to be modular?
+
+        #Apply only the maximum confidence even previous confidence.
         if (len(types) != 0):
             max_conf = max(confidences)
             best = types[confidences.index(max_conf)]
@@ -94,33 +98,23 @@ class Obstacle():
                 self.object.confidences = confidences
                 self.best_guess_conf = max_conf
 
-
-            #if indeterminiate then it could be a light bouy
     def classify_dock(self):
+        """Method to classify orientation of a dock"""
         if len(self.points) < 5 or self.radius < 3 :
-            print("Cant be a bouy")
+            #print("Cant be a dock")
             return
         points = numpy.array(self.points)
         hull_points = qhull2D(points)
         hull_points = hull_points[::-1]
-        #print 'Convex hull points: \n', hull_points, "\n"
         (rot_angle, area, width, height, center_point, corner_points) = minBoundingRect(hull_points)
-
-        #print "Minimum area bounding box:"
-        #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
-        #print "Width:", width, " Height:", height, "  Area:", area
-        #print "Center point: \n", center_point # numpy array
-        #print "Corner points: \n", corner_points, "\n"  # numpy array
-
-
-        #Get orientation and apply to rot
         if (width < height):
             self.rot =tf.transformations.quaternion_from_euler(0,0,rot_angle)
         else:
             self.rot =tf.transformations.quaternion_from_euler(0,0,rot_angle+1.5707)
+        #TODO Find a way to keep orientation consistent. It still can be confused in 2 directions.
 
 class ObjectServer():
-
+    """Object Server class to handle objects detected """
     def __init__(self):
         self.image_server = ImageServer.ImageServer()
         self.tf_broadcaster = tf.TransformBroadcaster()
@@ -129,6 +123,7 @@ class ObjectServer():
         self.objects = []
 
     def classify_objects(self):
+        """Classify the objects found so far using appropiate cameras."""
         objInFront = False
         my_info = {}
         for i in self.objects:
@@ -153,6 +148,7 @@ class ObjectServer():
             if(objInFront == False):
                 i.classify()
     def broadcast_objects(self):
+        """Broadcast the objects found"""
         #print("Publishing", self.objects)
         objectlist = ObjectArray()
         for i in self.objects:
@@ -161,7 +157,9 @@ class ObjectServer():
 
             objectlist.objects.append(i.object)
         self.pub.publish(objectlist)
+
     def cleanup(self):
+        """Method to clean up any objects that are old"""
         print("Cleaning")
         for i in self.objects:
 
@@ -171,8 +169,8 @@ class ObjectServer():
                 print("Removing")
                 self.objects.remove(i)
 
-
     def callback(self,my_map):
+        """Callback when a map is called."""
         points_x = []
         points_y = []
         my_data = []
@@ -181,7 +179,7 @@ class ObjectServer():
         c = 0
         count  = 0
 
-
+        #Put map into a list of points.
         for i in my_map.data:
             if i == 100:
                 points_x.append(r*info.resolution)
@@ -191,10 +189,8 @@ class ObjectServer():
             if r == info.width:
                 r = 0
                 c = c +1
-        #print(points_x)
 
-        #plt.scatter(points_x,points_y)
-
+        #Apply a distance Cluster on the objects.
         thresh = 3
         clust = hcluster.fclusterdata(my_data, thresh, criterion="distance")
         clusters = {}
@@ -206,13 +202,8 @@ class ObjectServer():
             else:
                 clusters[cluster_num].append(point)
             count = count+1
-        #print(clusters)
-        #plt.scatter(*numpy.transpose(my_data), c=clust)
-        #plt.axis("equal")
-        #title = "threshold: %f, number of clusters: %d" % (thresh, len(set(clust)))
-        #plt.title("wow")
-        #plt.show(block=False)
 
+        #Iterate through the different colusters
         for cluster in clusters:
             sum_x = 0
             sum_y = 0
@@ -225,13 +216,12 @@ class ObjectServer():
                 dist = math.sqrt((avg[0] - point[0])**2 + (avg[1] - point[1])**2)
                 if dist>max_dist:
                     max_dist = dist
-            #print(avg,max_dist)
 
+            #Get the Distance of the x and y axis
             x = avg[0] + info.origin.position.x
             y = avg[1] + info.origin.position.y
 
-
-            #if Close to a current object, update else: add new
+            #If the object is close to an already found object. Consider it the same object.
             updated = False
             current_frames = []
             name = ""
@@ -240,9 +230,7 @@ class ObjectServer():
                 current_frames.append(frame_id)
                 thresh_dist = 1
                 dist = math.sqrt((my_obj.x-x)**2 + (my_obj.y-y)**2)
-                #print(dist)
                 if (dist<thresh_dist):
-                    #print("Updating Object")
                     my_obj.x = x
                     my_obj.y = y
                     my_obj.radius = max_dist
@@ -251,22 +239,21 @@ class ObjectServer():
                     name = my_obj.object.frame_id
                     my_obj.time = rospy.Time.now()
                     break
+            #If it is not close to any other objects then add it as a new object.
             if updated == False:
-                print("Adding new object")
+                #print("Adding new object")
                 my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server)
                 my_obj.x = x
                 my_obj.y = y
                 my_obj.radius = max_dist
                 my_obj.points = clusters[cluster]
                 msg_obj = Object()
-                #TODO Check if object frame is being used.
+                #TODO Check if object frame number is being used.
                 msg_obj.frame_id = str(random.randint(1,10000))
                 my_obj.object = msg_obj
                 name = msg_obj.frame_id
+                #Append threw new object to the servers object list.
                 self.objects.append(my_obj)
-
-
-
 
 if __name__ == "__main__":
     rospy.init_node("object_server")
