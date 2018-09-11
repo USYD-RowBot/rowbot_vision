@@ -6,24 +6,25 @@ import cv.shape_test_2 as test
 import os
 import time
 
-speechOK=False;
-try:
-    import win32com.client as wincl
-    import threading;
-    from threading import Thread
-    def sayStuff(thingToSay):
-        speak.Speak(thingToSay)
-    speak = wincl.Dispatch("SAPI.SpVoice")
-    speechOK=False;
-except ImportError:
-    print("Speech off ;-;")
+speechOK=False
+if speechOK:
+    try:
+        import win32com.client as wincl
+        import threading
+        from threading import Thread
+        def sayStuff(thingToSay):
+            speak.Speak(thingToSay)
+        speak = wincl.Dispatch("SAPI.SpVoice")
+    except ImportError:
+        print("Speech off ;-;")
+        speechOK=False
 
-testType="shapeDetect";
+testType="shapeDetect"
 #testType="lightBuoy";
 #testType="beacon";
 
-cap=cv2.VideoCapture(1);
-p=None;
+cap=cv2.VideoCapture(1)
+p=None
 
 
     

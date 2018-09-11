@@ -19,6 +19,8 @@ for f in os.listdir("cntdict_img"):
     print (os.path.join("cntdict_img",f))
     img=img.astype(int)
     filename=os.path.join("cntdict",f).split(".")[0]+".npy"
-    cnt=getContoursFromMask(cv2.inRange(img,(10,10,10),(255,255,255)))[0] # basically black and white
+    cnts=getContoursFromMask(cv2.inRange(img,(10,10,10),(255,255,255))) # basically black and white
+    cnts = sorted(cnts, key=lambda i:cv2.contourArea(i),reverse=True)
+    cnt=cnts[0]
     fl=open(filename,"w")
     np.save(fl,cnt)

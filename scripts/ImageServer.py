@@ -12,6 +12,25 @@ from vision_scripts import buoy
 from vision_scripts import light_buoy
 
 
+
+
+
+'''
+Key issues:
+1. some masking techniques will create contours which aren't representative of colour.
+Solution: separate contour detection and colour detection.
+2. It's difficult to test the algorithm.
+Solution: build a feeder which can test the algorithm.
+3. We want to return a classified image in a frame, with an option to display it.
+Solution: chain the output of operator into fimgs['debug']
+'''
+
+
+
+
+
+
+
 max_angle=35
 interest_region_width=0.1 ## 2 * percentagewise width of the region that we're going to be interested in 
 
@@ -48,56 +67,16 @@ class ImageServer():
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("rowbot/image_raw",Image, self.callback)
         self.last_time = rospy.get_time()
+
+        # available operations
+        # fn is function call, passive is whether or not operation runs in each loop
+        self.ops={
+            "buoyDetect": {"fn":buoy, "passive":False},
+            "shapeDetect": {"fn":shapes, "passive":False},
+            "lpDetect": {"fn":light_buoy, "passive":False}
+        }
         pass
-    def classify_buoy(self,bearing,objInFront):
-        print("classifying")
-        
-        # colours to look for: 
-        # Red
-        # white
-        # green
-        # black
-
-        img_halfwidth=self.fimgs['bgr'].shape[1]/2
-        ROI_center = (bearing / max_angle * img_halfwidth)+ img_halfwidth 
-        real_irw=interest_region_width*img_halfwidth
-
-        result=runOperation(self.masks,{
-                'sp_green':'green',
-                'sp_red':'red',
-                'sat_green':'green',
-                'sat_red':'red',
-                'black':'black',
-                'white':'white'
-            },buoy.identify, buoy.collate)
-        # rospy.loginfo(result)
-        # do a bit of post processing of the result to get it into the form we want
-        # list comprehension yay
-        print(result)
-        filtered_result=[i for i in result if abs(i['cx']-ROI_center)<real_irw]
-
-        types = [i['name'] for i in filtered_result]
-        confs = [i['conf'] for i in filtered_result]
-        retval=[types, confs]
-        
-        return retval 
-
-
-
-    def callback(self,data):
-        #print("Rec image")
-        seconds_start = rospy.get_time()
-        self.image = data
-        try:
-            self.fimgs['bgr'] = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        except CvBridgeError as e:
-            print(e)
-        height, width = self.fimgs['bgr'].shape[:2]
-        new_w = int(width* 1)
-        new_h = int(height* 1)
-        self.fimgs['bgr'] = cv2.resize(self.fimgs['bgr'],(new_w, new_h))
-        # create filtered images.
-        
+    def generate_contours(self):
         # hsv: normal HSV.
         self.fimgs['hsv']=cv2.cvtColor(self.fimgs['bgr'],cv2.COLOR_BGR2HSV)
         
@@ -118,7 +97,7 @@ class ImageServer():
         # white and black masks
         # white: high value, low saturation
         self.masks['white']={'img':cv2.inRange(self.fimgs['s_hsv'], (0,0,np.max(self.fimgs['s_hsv'][:,:,2])*0.9), (180,np.max(self.fimgs['s_hsv'][:,:,1])*0.2,255))}
-        # black: low value
+        # black: low values
         self.masks['black']={'img':cv2.inRange(self.fimgs['s_hsv'], (0,0,0),(180,255,np.max(self.fimgs['s_hsv'][:,:,2])*0.2))}
 
         # saturation + HSV Red, blue and green.
@@ -128,14 +107,67 @@ class ImageServer():
         self.masks['sat_blue'] = {'img':cv2.inRange(self.fimgs['brite_hsv'],  np.array([106, 1, 1]),np.array([140, 255, 255]))}
         
         # sp_green: specifically for detecting green things by making a mask which is not green.
-        # use the same theory to detect things which are definiteyl red and blue?
-        self.masks['sp_blue']={'img':255-np.clip(self.fimgs['bgr'][:,:,0]-((self.fimgs['bgr'][:,:,1]+self.fimgs['bgr'][:,:,2])/2),0,255)}
-        self.masks['sp_green']={'img':255-np.clip(self.fimgs['bgr'][:,:,1]-((self.fimgs['bgr'][:,:,0]+self.fimgs['bgr'][:,:,2])/2),0,255)}
-        self.masks['sp_red']={'img':255-np.clip(self.fimgs['bgr'][:,:,2]-((self.fimgs['bgr'][:,:,1]+self.fimgs['bgr'][:,:,0])/2),0,255)}
-
+        # use the same theory to detect things which are definitely red and blue?
+        sp_colors=['sp_blue','sp_green','sp_red']
+        for i,s in enumerate(sp_colors):
+            mid=(self.fimgs['bgr'][:, :, i].astype(int)-((self.fimgs['bgr'][:, :, (i+1)%3].astype(int)+self.fimgs['bgr'][:, :, (i+2)%3].astype(int))/3)).astype(np.uint8)
+            self.masks[sp_colors[i]]={"img":cv2.inRange(mid,np.max(mid)*0.5,255)}
         # contour finding
         for mask in self.masks:
             self.masks[mask]['cnts']=getContoursFromMask(self.masks[mask]['img'])
+        
+    def classify_buoy(self,bearing=0,objInFront=False):
+        return self.runOp("buoyDetect",bearing,objInFront)
+    def runOp(self,opname,bearing=0,objInFront=False):
+        print("running operation "+ opname+"...")
+        self.generate_contours()
+        results=runOperation(self.masks,{
+            'sp_blue':'blue',
+            'sp_green':'green',
+            'sp_red':'red',
+            'sat_blue':'blue',
+            'sat_green':'green',
+            'sat_red':'red',
+            "white":"white",
+            "black":"black"
+            },self.ops[opname]["fn"].identify,self.ops[opname]["fn"].collate) # still going with mask-colours. I hope it works...
+        print (results)
+        return False
+        # img_halfwidth=self.fimgs['bgr'].shape[1]/2
+        # ROI_center = (bearing / max_angle * img_halfwidth)+ img_halfwidth 
+        # real_irw=interest_region_width*img_halfwidth
+
+        # # rospy.loginfo(result)
+        # # do a bit of post processing of the result to get it into the form we want
+        # # list comprehension yay
+        # print(result)
+        # filtered_result=[i for i in result if abs(i['cx']-ROI_center)<real_irw]
+
+
+
+        # types = [i['name'] for i in filtered_result]
+        # confs = [i['conf'] for i in filtered_result]
+        # retval=[types, confs]
+        
+        # return retval 
+
+
+
+    def callback(self,data):
+        #print("Rec image")
+        seconds_start = rospy.get_time()
+        self.image = data
+        try:
+            self.fimgs['bgr'] = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+        height, width = self.fimgs['bgr'].shape[:2]
+        new_w = int(width* 1)
+        new_h = int(height* 1)
+        self.fimgs['bgr'] = cv2.resize(self.fimgs['bgr'],(new_w, new_h))
+        # create filtered images.
+        self.generate_contours()
+        
         
         # run the shape identifier
         # desired result: a single shape.
