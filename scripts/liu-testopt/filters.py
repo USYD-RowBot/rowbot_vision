@@ -9,9 +9,9 @@ def getContoursFromMask(mask):
     # kernel = np.ones((5,5),np.uint8)
     # closing = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     closing=mask
-    cnts = cv2.findContours(closing, cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
-    cnts = cnts[1]
-    return cnts
+    img, cnts,hierarchy = cv2.findContours(closing, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    if not hierarchy is None : return (cnts,hierarchy[0])
+    else: return (cnts,None)
 
 cacheSum=0
 def preprocess(img):
@@ -56,18 +56,21 @@ def preprocess(img):
         sp_colors=['sp_blue','sp_green','sp_red']
         for i,s in enumerate(sp_colors):
             mid=np.clip(fimgs['bgr'][:, :, i].astype(int)-((fimgs['bgr'][:, :, (i+1)%3].astype(int)+fimgs['bgr'][:, :, (i+2)%3].astype(int))/2),0,255).astype(np.uint8)
-            print(np.max(mid))
+            # print(np.max(mid))
             masks[sp_colors[i]]={"img":cv2.inRange(mid,np.max(mid)*0.5+1,255)}
         # contour finding
         for mask in masks:
             masks[mask]['cnts']=getContoursFromMask(masks[mask]['img'])
 
-def getContours(img,masknames):
+def getContours(img,masknames,includeHierarchy=False):
     preprocess(img)
     cnts={}
     for m in masknames:
         try:
-           cnts[m]=masks[m]['cnts']
+            if includeHierarchy==False:
+                cnts[m]=masks[m]['cnts'][0]
+            else:
+                cnts[m]=masks[m]['cnts']
         except KeyError:
             print(m+" not recognised to be a mask.")
     return cnts
