@@ -59,7 +59,7 @@ def identify(img, bearing = None):
                 if (similarity>0):
                     fullname=coldict[col]+' '+dcnt
                     if fullname in realItems: # filter out obstacles that shouldnt exist
-                        IDs.append({"name":fullname,"similarity":similarity,'cx':cX,'cnt':cnt})
+                        IDs.append({"name":fullname,"similarity":similarity,'cx':cX,'cnt':cnt,'confidence':similarity*100+cv2.contourArea(cnt)})
     IDs=sorted(IDs,key=lambda i:i["similarity"],reverse=True)
     if not bearing is None:# filter based on bearing
         img_halfwidth=img.shape[1]/2
@@ -68,15 +68,6 @@ def identify(img, bearing = None):
         _IDs=[i for i in IDs if abs(i['cx']-ROI_center)<real_irw]
         IDs=_IDs
     return IDs
-
-
-
-
-
-
-
-
-
 
 
 # clipping, for later
