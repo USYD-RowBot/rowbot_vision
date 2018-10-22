@@ -1,0 +1,23 @@
+digraph G {
+"base_footprint" -> "base_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"odom" -> "base_footprint"[label="Broadcaster: /ekf_se\nAverage rate: 28.333 Hz\nMost recent transform: 54.600 ( 0.030 sec old)\nBuffer length: 0.600 sec\n"];
+"base_link" -> "front_camera_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"base_link" -> "gps"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"base_link" -> "left_camera_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"base_link" -> "rear_camera_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"base_link" -> "right_camera_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"base_link" -> "scan"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"base_link" -> "velodyne_base_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"velodyne_base_link" -> "velodyne"[label="Broadcaster: /robot_state_publisher\nAverage rate: 31.858 Hz\nMost recent transform: 55.101 ( -0.471 sec old)\nBuffer length: 0.565 sec\n"];
+"map" -> "odom"[label="Broadcaster: /gmapping_thing\nAverage rate: 21.818 Hz\nMost recent transform: 54.650 ( -0.020 sec old)\nBuffer length: 0.550 sec\n"];
+"map" -> "4056"[label="Broadcaster: /object_server\nAverage rate: 6.000 Hz\nMost recent transform: 54.581 ( 0.049 sec old)\nBuffer length: 0.500 sec\n"];
+"map" -> "3093"[label="Broadcaster: /object_server\nAverage rate: 6.000 Hz\nMost recent transform: 54.581 ( 0.049 sec old)\nBuffer length: 0.500 sec\n"];
+"map" -> "6000"[label="Broadcaster: /object_server\nAverage rate: 6.000 Hz\nMost recent transform: 54.581 ( 0.049 sec old)\nBuffer length: 0.500 sec\n"];
+"map" -> "9323"[label="Broadcaster: /object_server\nAverage rate: 5.988 Hz\nMost recent transform: 54.582 ( 0.048 sec old)\nBuffer length: 0.501 sec\n"];
+"map" -> "7683"[label="Broadcaster: /object_server\nAverage rate: 5.988 Hz\nMost recent transform: 54.582 ( 0.048 sec old)\nBuffer length: 0.501 sec\n"];
+"map" -> "2405"[label="Broadcaster: /object_server\nAverage rate: 5.976 Hz\nMost recent transform: 54.583 ( 0.047 sec old)\nBuffer length: 0.502 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 54.630"[ shape=plaintext ] ;
+ }->"map";
+}

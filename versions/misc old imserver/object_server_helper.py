@@ -50,10 +50,10 @@ if __name__ == "__main__":
     rospy.init_node("object_server")
     os = ObjectServer()
     rate = rospy.Rate(5)
-    os.addObstacle(10,10,"1","buoy1","red_buoy")
-    os.addObstacle(20,10,"2","buoy2","green_buoy")
-    os.addObstacle(10,30,"3","buoy3","red_buoy")
-    os.addObstacle(20,30,"4","buoy4","green_buoy")
+    os.addObstacle(10,10,"1","buoy1","red buoy")
+    os.addObstacle(20,10,"2","buoy2","green buoy")
+    os.addObstacle(10,30,"3","buoy3","red buoy")
+    os.addObstacle(20,30,"4","buoy4","green buoy")
 
     while not rospy.is_shutdown():
         os.broadcast_objects()

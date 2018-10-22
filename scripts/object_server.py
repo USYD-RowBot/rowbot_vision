@@ -64,7 +64,7 @@ class Obstacle():
 
             if result == False:
                 #Did not get seen by the camera
-                #print("Did not get seen by camera")
+                print("Did not get seen by camera")
                 pass
             else:
                 self.seen_by_camera = True
@@ -124,7 +124,6 @@ class ObjectServer():
 
     def classify_objects(self):
         """Classify the objects found so far using appropiate cameras."""
-        objInFront = False
         my_info = {}
         for i in self.objects:
             try:
@@ -135,6 +134,7 @@ class ObjectServer():
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pass
         for i in my_info:
+            objInFront=False
             (this_bearing, this_dist )= my_info[i]
             max_bearing = this_bearing+3.5
             min_bearing = this_bearing-3.5
@@ -147,12 +147,13 @@ class ObjectServer():
 
             if(objInFront == False):
                 i.classify()
+                print("classified :D")
     def broadcast_objects(self):
         """Broadcast the objects found"""
         #print("Publishing", self.objects)
         objectlist = ObjectArray()
         for i in self.objects:
-            i.classify()
+            #i.classify()
             i.broadcast()
 
             objectlist.objects.append(i.object)
@@ -162,7 +163,6 @@ class ObjectServer():
         """Method to clean up any objects that are old"""
         print("Cleaning")
         for i in self.objects:
-
             time_diff = rospy.Time.now().secs - i.time.secs
             print(i.object.frame_id, time_diff)
             if time_diff > 3:
@@ -241,7 +241,7 @@ class ObjectServer():
                     break
             #If it is not close to any other objects then add it as a new object.
             if updated == False:
-                #print("Adding new object")
+                print("Adding new object")
                 my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server)
                 my_obj.x = x
                 my_obj.y = y

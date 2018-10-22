@@ -22,9 +22,11 @@ class ImageServer():
         ids=buoy.identify(self.image,bearing)
         types=[]
         confidences=[]
+        cv2.imshow ("potato",self.image)
+        cv2.waitKey(100);
         for id in ids:
-            types.push(id.name)
-            confidences.push(id.confidence)
+            types.append(id['name'])
+            confidences.append(id['confidence'])
         return (types, confidences)
 
     def callback(self,data):

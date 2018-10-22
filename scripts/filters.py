@@ -6,9 +6,9 @@ masks={}
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 def getContoursFromMask(mask):
-    # kernel = np.ones((5,5),np.uint8)
-    # closing = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    closing=mask
+    kernel = np.ones((5,5),np.uint8)
+    closing = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    # closing=mask
     img, cnts,hierarchy = cv2.findContours(closing, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     if not hierarchy is None : return (cnts,hierarchy[0])
     else: return (cnts,None)
@@ -17,6 +17,7 @@ cacheSum=0
 def preprocess(img):
     global cacheSum
     if np.sum(img)==cacheSum:
+        print('filtering caught optimised')
         # we have already processed this image- do nothing
         return
     else:

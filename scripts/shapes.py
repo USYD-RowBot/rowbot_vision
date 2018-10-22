@@ -26,6 +26,7 @@ def identify(img):
         [2]:hierarchy
     '''
     nextCnt = []
+    IDs=[]
     for cnt in cnts:
         # pick out 2nd level contours
         if cnt[2][3] in rectIndices:

@@ -21,22 +21,21 @@ for f in os.listdir(os.path.join(my_path,"cntdict")):
 max_angle=35
 interest_region_width=0.1 ## 2 * percentagewise width of the region that we're going to be interested in 
 
-bnu20=1
+
 
 def identify(img, bearing = None):
     # apply a bunch of relevant filters to get contours
-    cnts=filters.getContours(img,['sat_green','sat_red','sp_green','sp_red','white','black'])
+    cnts=filters.getContours(img,['sat_green','sat_red','sp_green','sp_red','white'])
     # for mapping colour names
     coldict={
         'sat_green':'green',
         'sat_red':'red',
         'sp_green':'green',
         'sp_red':'red',
-        'white':'white',
-        'black':'black',
+        'white':'white'
     }
 
-    realItems=['green buoy','red buoy','black obstacle', 'white lightbuoy']
+    realItems=['green buoy','red buoy','white buoy','black obstacle', 'white lightbuoy']
     # process contours
     IDs=[]
 
@@ -55,23 +54,13 @@ def identify(img, bearing = None):
                 continue
             M = cv2.moments(cnt)
             cX = int(M["m10"] / M["m00"])
-            try:
-                elps=cv2.fitEllipse(cnt)[1]
-                elpsa=elps[0]*elps[1]
-                if (abs(1-cv2.contourArea(cnt)/elpsa)<0.01):# shape is elliptical
-                    fullname=coldict[col]+' obstacle'
+            for dcnt in cntdict:
+                similarity=1-cv2.matchShapes(cntdict[dcnt],cnt,1,0.0)
+                if (similarity>0.5):
+                    fullname=coldict[col]+' '+dcnt
                     if fullname in realItems: # filter out obstacles that shouldnt exist
-                        IDs.append({"name":fullname,'cx':cX,'cnt':cnt,'confidence':cv2.contourArea(cnt)})
-            except:
-                pass
-            rect=cv2.minAreaRect(cnt)
-            #recta=rect[0]*rect[1]
-            if (#abs(1-cv2.contourArea(cnt)/recta)<0.01 and
-                abs((rect[1][0]/rect[1][1])-0.4)<0.2 and abs(rect[2])<0.1):
-                fullname=coldict[col]+' buoy'
-                if fullname in realItems: # filter out obstacles that shouldnt exist
-                    IDs.append({"name":fullname,'cx':cX,'cnt':cnt,'confidence':cv2.contourArea(cnt)})
-    IDs=sorted(IDs,key=lambda i:i["confidence"],reverse=True)
+                        IDs.append({"name":fullname,"similarity":similarity,'cx':cX,'cnt':cnt,'confidence':cv2.contourArea(cnt)**similarity})
+    IDs=sorted(IDs,key=lambda i:i["similarity"],reverse=True)
     #print(IDs)
     if not bearing is None:# filter based on bearing
         img_halfwidth=img.shape[1]/2
