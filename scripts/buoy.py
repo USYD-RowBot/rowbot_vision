@@ -4,6 +4,7 @@ import numpy as np
 import os
 import json
 import filters
+import rospy
 # load contours from the dictionary
 
 cntdict={}
@@ -24,6 +25,8 @@ interest_region_width=0.1 ## 2 * percentagewise width of the region that we're g
 bnu20=1
 
 def identify(img, bearing = None):
+    if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        dbg_img=img.copy()
     # apply a bunch of relevant filters to get contours
     cnts=filters.getContours(img,['sat_green','sat_red','sp_green','sp_red','white','black'])
     # for mapping colour names
@@ -48,6 +51,8 @@ def identify(img, bearing = None):
     for col in cnts:
         _cnt=cnts[col]
         for cnt in _cnt:
+            if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+                cv2.drawContours(dbg_img,[cnt],-1,[0,0,0])
             # general noise removal shenanigans
             # remove things with insignificant area
             cA=cv2.contourArea(cnt)
@@ -55,15 +60,16 @@ def identify(img, bearing = None):
                 continue
             M = cv2.moments(cnt)
             cX = int(M["m10"] / M["m00"])
-            try:
-                elps=cv2.fitEllipse(cnt)[1]
-                elpsa=elps[0]*elps[1]
-                if (abs(1-cv2.contourArea(cnt)/elpsa)<0.01):# shape is elliptical
-                    fullname=coldict[col]+' obstacle'
-                    if fullname in realItems: # filter out obstacles that shouldnt exist
-                        IDs.append({"name":fullname,'cx':cX,'cnt':cnt,'confidence':cv2.contourArea(cnt)})
-            except:
-                pass
+            if len(cnt)>5:
+                try:
+                    elps=cv2.fitEllipse(cnt)[1]
+                    elpsa=elps[0]*elps[1]
+                    if (abs(1-cv2.contourArea(cnt)/elpsa)<0.01):# shape is elliptical
+                        fullname=coldict[col]+' obstacle'
+                        if fullname in realItems: # filter out obstacles that shouldnt exist
+                            IDs.append({"name":fullname,'cx':cX,'cnt':cnt,'confidence':cv2.contourArea(cnt)})
+                except:
+                    pass
             rect=cv2.minAreaRect(cnt)
             #recta=rect[0]*rect[1]
             if (#abs(1-cv2.contourArea(cnt)/recta)<0.01 and
@@ -79,6 +85,9 @@ def identify(img, bearing = None):
         real_irw=interest_region_width*img_halfwidth
         _IDs=[i for i in IDs if abs(i['cx']-ROI_center)<real_irw]
         IDs=_IDs
+    if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        cv2.imshow('buoy_output',dbg_img)
+        cv2.waitKey(10)
     return IDs
 
 

@@ -178,7 +178,7 @@ class ObjectServer():
         r = 0
         c = 0
         count  = 0
-
+        #print(my_map)
         #Put map into a list of points.
         for i in my_map.data:
             if i == 100:
@@ -192,6 +192,7 @@ class ObjectServer():
 
         #Apply a distance Cluster on the objects.
         thresh = 3
+        #print(my_data,thresh)
         clust = hcluster.fclusterdata(my_data, thresh, criterion="distance")
         clusters = {}
         count = 0

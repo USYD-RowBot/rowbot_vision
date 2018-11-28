@@ -2,12 +2,14 @@
 import cv2
 import numpy as np
 import filters
-
+import os
+import rospy
 
 def identify(img):
+    #rospy.loginfo(rospy.get_param('~debug_level'))
     cnts = filters.getContours(img, ['white'], True)
-    nextCnt=[]
-    rectIndices=[]
+    nextCnt = []
+    rectIndices = []
     # get outer level contorus.
     for c, cnt in enumerate(cnts['white'][0]):
         # check if they are rectangles
@@ -26,8 +28,12 @@ def identify(img):
         [2]:hierarchy
     '''
     nextCnt = []
-    IDs=[]
+    IDs = []
+    if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        dbg_img=img.copy()
     for cnt in cnts:
+        if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+            cv2.drawContours(dbg_img,[cnt[0]],-1,[0,0,0])
         # pick out 2nd level contours
         if cnt[2][3] in rectIndices:
             #print ("contour parent was outer level")
@@ -66,8 +72,12 @@ def identify(img):
     # POST PROCESSSING: confidence based sorting
     IDs = sorted(IDs, key=lambda i: i['area'], reverse=True)
     # get the colours now.
+    if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        cv2.imshow('shapes_output',dbg_img)
+        cv2.waitKey(10)
     return IDs
 
+my_path = os.path.abspath(os.path.dirname(__file__))
 
 debugMode = "fromFile"
 if __name__ == "__main__":

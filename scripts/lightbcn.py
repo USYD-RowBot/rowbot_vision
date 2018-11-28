@@ -4,6 +4,7 @@ import numpy as np
 import os
 import json
 import filters
+import rospy 
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 
@@ -41,8 +42,12 @@ def identify(img):
         [1]:bounding rect
         [2]:hierarchy
     '''
+    if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        dbg_img=img.copy()
     nextCnt=[]
     for cnt in cnts:
+        if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+            cv2.drawContours(dbg_img,[cnt[0]],-1,[0,0,0])
         # pick out 2nd level contours which overlap the previous detection
         if cnt[2][3] in rectIndices:
             #print ("contour parent was outer level")
@@ -56,6 +61,9 @@ def identify(img):
         [0]:contour
         [1]:bounding rect
     '''
+    if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        cv2.imshow('lightbcn_output',dbg_img)
+        cv2.waitKey(10)
     try:
         mostProbable=max(nextCnt,key=lambda x: cv2.contourArea(x[0]))
         cachedContourRect=mostProbable[1]

@@ -15,19 +15,22 @@ class ImageServer():
     def __init__(self):
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("rowbot/image_raw",Image, self.callback)
+        self.image=None
         self.last_time = rospy.get_time()
         return
 
     def classify_buoy(self,bearing=0,objInFront=False):
-        ids=buoy.identify(self.image,bearing)
-        types=[]
-        confidences=[]
-        cv2.imshow ("potato",self.image)
-        cv2.waitKey(100);
-        for id in ids:
-            types.append(id['name'])
-            confidences.append(id['confidence'])
-        return (types, confidences)
+        if not self.image is None:
+            ids=buoy.identify(self.image,bearing)
+            types=[]
+            confidences=[]
+            cv2.waitKey(100)
+            for id in ids:
+                types.append(id['name'])
+                confidences.append(id['confidence'])
+            return (types, confidences)
+        else:
+            return ([],[])
 
     def callback(self,data):
         #print("Rec image")
@@ -46,8 +49,13 @@ class ImageServer():
         result=lightbcn.identify(self.image)
         rospy.loginfo(result)
 
+        if __name__ == "__main__":
+            result=Is.classify_buoy(bearing=None)
+            rospy.loginfo(result)
 
 if __name__ == "__main__":
     rospy.init_node("Image_test")
     Is = ImageServer()
+    # also run the classify_buoy cos y not
     rospy.spin()
+
