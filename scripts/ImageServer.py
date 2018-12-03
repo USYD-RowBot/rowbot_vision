@@ -44,13 +44,13 @@ class ImageServer():
         new_h = int(height* 1)
         self.image = cv2.resize(self.image,(new_w, new_h))
         result=shapes.identify(self.image)
+        result = [(i['shape'],i['color']) for i in result]
         rospy.loginfo(result)
-        
         result=lightbcn.identify(self.image)
-        rospy.loginfo(result)
+        #rospy.loginfo(result)
 
         if __name__ == "__main__":
-            result=Is.classify_buoy(bearing=None)
+            result=self.classify_buoy(bearing=None)
             rospy.loginfo(result)
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ cacheSum=0
 def preprocess(img):
     global cacheSum
     if np.sum(img)==cacheSum:
-        print('filtering caught optimised')
+        #print('filtering caught optimised')
         # we have already processed this image- do nothing
         return
     else:
