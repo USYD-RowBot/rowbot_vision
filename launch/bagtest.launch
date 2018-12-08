@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-	<remap from="front_camera/image_raw" to="rowbot/image_raw" />
 	<node name="image_server_1" pkg="rowbot_vision" type="ImageServer.py" output="screen">
 		<param name="debug_level" value="full" />
 	</node>

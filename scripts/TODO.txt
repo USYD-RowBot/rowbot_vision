@@ -1,0 +1,9 @@
+build capacitor
+
+
+
+
+////stretch goals
+Detection of buoy in every frame where buoy exists
+
+Eliminate all non-buoy objects
