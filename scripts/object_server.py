@@ -258,15 +258,19 @@ class ObjectServer():
             if updated == False:
                 print("Adding new object")
                 frame_id = str(random.randint(1,10000))
-                self.add_object(self,points,max_dist,x,y,frame_id,frame_id)
+                self.add_object(clusters[cluster],max_dist,x,y,frame_id,frame_id)
                 #Append threw new object to the servers object list.
 
     def add_object(self,points,rad,x,y,frame_id,name):
         my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server,self)
         my_obj.x = x
         my_obj.y = y
-        my_obj.radius = max_dist
-        my_obj.points = clusters[cluster]
+        my_obj.radius = rad
+        my_obj.points = points
+        msg_obj = Object()
+        #TODO Check if object frame number is being used.
+        msg_obj.frame_id = frame_id
+        my_obj.object = msg_obj
 
         #TODO Check if object frame number is being used.
 
