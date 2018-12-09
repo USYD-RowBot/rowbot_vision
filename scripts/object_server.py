@@ -17,7 +17,7 @@ M_PI = 3.14159265359
 
 class Obstacle():
     """Obstacle Class containing information and functions for different detected Obstacles"""
-    def __init__(self,tf_broadcaster,tf_listener,image_server):
+    def __init__(self,tf_broadcaster,tf_listener,image_server,object_server):
         self.x = 0
         self.y = 0
         self.time = rospy.Time.now()
@@ -31,6 +31,8 @@ class Obstacle():
         self.tf_listener = tf_listener
         self.image_server = image_server
         self.best_guess_conf = 0
+        self.object_server = object_server
+        self.parent_frame = "map"
     def broadcast(self):
         """Broadcast the object via tf"""
         self.tf_broadcaster.sendTransform(
@@ -38,9 +40,9 @@ class Obstacle():
         self.rot,
         rospy.Time.now(),
         self.object.frame_id,
-        "map"
+        self.parent_frame
         )
-    def classify(self):
+    def classify(self,conflicting):
         """Try classify the object using a variety of means"""
         #TODO If two objects have a similar bearing, don't classify it.
         score_buoy = 0
@@ -48,7 +50,7 @@ class Obstacle():
         types = []
         #If self.radius is < 1.2 then it is a buoy
         #TODO Use rosparam to get buoy size.
-        if self.radius < 1.2:
+        if self.radius < 1.6:
             #Try get detected by camera
             result = False
             try:
@@ -57,14 +59,18 @@ class Obstacle():
                 #Get the bearing of the object relative to the camera
                 bearing= -math.degrees(math.atan2(trans[1], trans[0]))
                 #Classify using the camera.
-                result = self.image_server.classify_buoy(bearing,0)
+                if conflicting == False:
+                    rospy.loginfo("CLassifying buoy placholder")
+                    result = False
+                    #result = self.image_server.classify_buoy(bearing,0)
+                self.seen_by_camera = False
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pass
 
             if result == False:
                 #Did not get seen by the camera
-                print("Did not get seen by camera")
+                rospy.logdebug("Did not get seen by camera")
                 pass
             else:
                 self.seen_by_camera = True
@@ -97,7 +103,6 @@ class Obstacle():
                 self.object.types = types
                 self.object.confidences = confidences
                 self.best_guess_conf = max_conf
-
     def classify_dock(self):
         """Method to classify orientation of a dock"""
         if len(self.points) < 5 or self.radius < 3 :
@@ -113,6 +118,14 @@ class Obstacle():
             self.rot =tf.transformations.quaternion_from_euler(0,0,rot_angle+1.5707)
         #TODO Find a way to keep orientation consistent. It still can be confused in 2 directions.
 
+
+        #IF height/width < 3, then its a dock
+
+        """Docking locations: corner_points:
+        tf transformation x +/- 2"""
+
+
+
 class ObjectServer():
     """Object Server class to handle objects detected """
     def __init__(self):
@@ -121,6 +134,7 @@ class ObjectServer():
         self.tf_listener = tf.TransformListener()
         self.pub = rospy.Publisher("objects", ObjectArray)
         self.objects = []
+        self.map = OccupancyGrid()
 
     def classify_objects(self):
         """Classify the objects found so far using appropiate cameras."""
@@ -134,7 +148,7 @@ class ObjectServer():
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pass
         for i in my_info:
-            objInFront=False
+            conflicting=False
             (this_bearing, this_dist )= my_info[i]
             max_bearing = this_bearing+3.5
             min_bearing = this_bearing-3.5
@@ -142,35 +156,35 @@ class ObjectServer():
                 if i is key:
                     pass
                 elif my_info[key][0] > min_bearing and my_info[key][0] < max_bearing and my_info[key][1] < this_dist-0.5:
-                    objInFront = True
+                    conflicting = True
                     break
-
-            if(objInFront == False):
-                i.classify()
-                print("classified :D")
+            i.classify(conflicting)
+        rospy.logdebug("Classifyed clusters")
     def broadcast_objects(self):
         """Broadcast the objects found"""
-        #print("Publishing", self.objects)
         objectlist = ObjectArray()
         for i in self.objects:
-            #i.classify()
             i.broadcast()
-
             objectlist.objects.append(i.object)
         self.pub.publish(objectlist)
 
     def cleanup(self):
         """Method to clean up any objects that are old"""
+        expire_time = 3
         print("Cleaning")
         for i in self.objects:
             time_diff = rospy.Time.now().secs - i.time.secs
             print(i.object.frame_id, time_diff)
-            if time_diff > 3:
-                print("Removing")
+            if time_diff > expire_time:
+                rospy.logdebug("Removing expired Object")
                 self.objects.remove(i)
 
     def callback(self,my_map):
         """Callback when a map is called."""
+        self.map = my_map
+
+    def process_map(self):
+        my_map = self.map
         points_x = []
         points_y = []
         my_data = []
@@ -181,7 +195,7 @@ class ObjectServer():
         #print(my_map)
         #Put map into a list of points.
         for i in my_map.data:
-            if i == 100:
+            if i > 70:
                 points_x.append(r*info.resolution)
                 points_y.append(c*info.resolution)
                 my_data.append((r*info.resolution,c*info.resolution))
@@ -243,25 +257,36 @@ class ObjectServer():
             #If it is not close to any other objects then add it as a new object.
             if updated == False:
                 print("Adding new object")
-                my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server)
-                my_obj.x = x
-                my_obj.y = y
-                my_obj.radius = max_dist
-                my_obj.points = clusters[cluster]
-                msg_obj = Object()
-                #TODO Check if object frame number is being used.
-                msg_obj.frame_id = str(random.randint(1,10000))
-                my_obj.object = msg_obj
-                name = msg_obj.frame_id
+                frame_id = str(random.randint(1,10000))
+                self.add_object(clusters[cluster],max_dist,x,y,frame_id,frame_id)
                 #Append threw new object to the servers object list.
-                self.objects.append(my_obj)
+
+    def add_object(self,points,rad,x,y,frame_id,name):
+        my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server,self)
+        my_obj.x = x
+        my_obj.y = y
+        my_obj.radius = rad
+        my_obj.points = points
+        msg_obj = Object()
+        #TODO Check if object frame number is being used.
+        msg_obj.frame_id = frame_id
+        my_obj.object = msg_obj
+
+        #TODO Check if object frame number is being used.
+
+        my_obj.object = msg_obj
+        name = msg_obj.frame_id
+        self.objects.append(my_obj)
+
 
 if __name__ == "__main__":
     rospy.init_node("object_server")
     object_server = ObjectServer()
     rate = rospy.Rate(5)
     sub = rospy.Subscriber("map",OccupancyGrid,object_server.callback)
+    rospy.sleep(1)
     while not rospy.is_shutdown():
+        object_server.process_map();
         object_server.cleanup()
         object_server.classify_objects()
         object_server.broadcast_objects()
