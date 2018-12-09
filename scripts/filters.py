@@ -2,6 +2,29 @@ import cv2
 import numpy as np
 import os
 
+"""List of filters and masks
+filter images:
+bgr:        blue green red
+hsv:        hue sat value
+s_hsv:      shifted hsv
+brite_hsv:  only bright shifted hsv
+
+masks:
+brite:      non grey i.e. colourful
+white:      white
+black:      black
+sat_red:    hue-based red
+sat_green:  hue-based green
+sat_blue:   hue-based blue
+sp_red:     relative-rgb based red
+sp_green:   relative-rgb based green
+sp_blue:    relative-rgb based blue
+
+"""
+
+
+
+
 my_path = os.path.abspath(os.path.dirname(__file__))
 class FilterCacher:
     def __init__(self):
@@ -27,12 +50,21 @@ class FilterCacher:
             # we have already processed this image- do nothing
             return
         else:
+            #self.clahe = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(20,20))
             self.cacheSum = np.sum(img)
             self.fimgs['bgr'] = img
             # hsv: normal HSV.
-            self.fimgs['hsv'] = cv2.cvtColor(
-                self.fimgs['bgr'], cv2.COLOR_BGR2HSV)
 
+            # self.fimgs['lab'] = cv2.cvtColor(self.fimgs['bgr'], cv2.COLOR_BGR2LAB)
+
+            # lab_planes = cv2.split(self.fimgs['lab'])
+
+            # lab_planes[0] = self.clahe.apply(lab_planes[0])
+
+            # self.fimgs['clahe_lab'] = cv2.merge(lab_planes)
+
+            # self.fimgs['clahe_bgr'] = cv2.cvtColor(self.fimgs['clahe_lab'], cv2.COLOR_LAB2BGR)
+            self.fimgs['hsv']=cv2.cvtColor(self.fimgs['bgr'], cv2.COLOR_BGR2HSV)
             # s_hsv: shifted HSV.
             # convert to integer so we can use modulo
             fullh = (self.fimgs['hsv'][:, :, 0]).astype(int)
@@ -60,18 +92,18 @@ class FilterCacher:
             self.fimgs['brite_hsv'] = cv2.bitwise_and(
                 self.fimgs['s_hsv'], self.fimgs['s_hsv'], mask=self.masks['brite']['img'])
             self.masks['sat_red'] = {'img': cv2.inRange(
-                self.fimgs['brite_hsv'],  np.array([0, 1, 1]), np.array([30, 255, 255]))}
+                self.fimgs['s_hsv'],  np.array([0, 76, 1]), np.array([30, 255, 255]))}
             self.masks['sat_green'] = {'img': cv2.inRange(
-                self.fimgs['brite_hsv'],  np.array([50, 1, 1]), np.array([95, 255, 255]))}
+                self.fimgs['s_hsv'],  np.array([45, 76, 1]), np.array([95, 255, 255]))}
             self.masks['sat_blue'] = {'img': cv2.inRange(
-                self.fimgs['brite_hsv'],  np.array([106, 1, 1]), np.array([140, 255, 255]))}
+                self.fimgs['s_hsv'],  np.array([106, 1, 1]), np.array([140, 255, 255]))}
 
             # sp_green: specifically for detecting green things by making a mask which is not green.
             # use the same theory to detect things which are definitely red and blue?
             sp_colors = ['sp_blue', 'sp_green', 'sp_red']
             for i, s in enumerate(sp_colors):
                 mid = np.clip(self.fimgs['bgr'][:, :, i].astype(int)-((self.fimgs['bgr'][:, :, (i+1) % 3].astype(
-                    int)+self.fimgs['bgr'][:, :, (i+2) % 3].astype(int))/2), 0, 255).astype(np.uint8)
+                    int)+self.fimgs['bgr'][:, :, (i+2) % 3].astype(int))*5/6), 0, 255).astype(np.uint8)
                 # print(np.max(mid))
                 self.masks[sp_colors[i]] = {
                     "img": cv2.inRange(mid, np.max(mid)*0.5+1, 255)}
@@ -79,10 +111,10 @@ class FilterCacher:
             for mask in self.masks:
                 self.masks[mask]['cnts'] = self.getContoursFromMask(
                     self.masks[mask]['img'])
-            
+
             # #### capacitive
             # if not self.capacitive is None:
-                
+
             #     self.capacitive=(self.capacitive/2+img/2)
             # else:
             #     self.capacitive=img
@@ -113,8 +145,9 @@ class FilterCacher:
         return np.sum(img2)/cv2.contourArea(cnt)
 
 
-debugMode = "fromFile"
-todraw = ['white']
+debugMode = "fromVideo"
+todraw = ['sp_green','sat_green','brite']
+todraw_fimgs = ['bgr']
 if __name__ == "__main__":
     if debugMode == "fromFile":
         fc=FilterCacher()
@@ -131,6 +164,29 @@ if __name__ == "__main__":
                     disp = cv2.bitwise_and(
                         testimg, testimg, mask=fc.masks[m]['img'])
                     cv2.imshow(m, disp)
+            while (1):
+                k = cv2.waitKey(5) & 0xFF
+                if k == 27:
+                    break
+    if debugMode == "fromVideo":
+        fc=FilterCacher()
+        vc=cv2.VideoCapture("/home/stevenliu/Videos/boaty_boat.mp4")
+        while vc.isOpened():
+            ret,testimg = vc.read()
+            fc.preprocess(testimg)
+            if len(todraw) > 0:
+                for m in todraw:
+                    disp = cv2.bitwise_and(
+                        testimg, testimg, mask=fc.masks[m]['img'])
+                    cv2.imshow(m, disp)
+            else:
+                for m in fc.masks:
+                    disp = cv2.bitwise_and(
+                        testimg, testimg, mask=fc.masks[m]['img'])
+                    cv2.imshow(m, disp)
+            if len(todraw_fimgs)>0:
+                for f in todraw_fimgs:
+                    cv2.imshow(f,fc.fimgs[f])
             while (1):
                 k = cv2.waitKey(5) & 0xFF
                 if k == 27:

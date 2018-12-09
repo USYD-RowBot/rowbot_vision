@@ -10,6 +10,12 @@ my_path = os.path.abspath(os.path.dirname(__file__))
 
 class LightPatternDetector:
     def __init__(self):
+        if rospy.has_param("~debug_level") and rospy.get_param("~debug_level") == "full":
+            self.debug_level=101
+        elif rospy.has_param("~debug_pattern"):
+            self.debug_level=51
+        else:
+            self.debug_level=0
         self.cachedPattern=[]
         self.cachedContourRect=[]
         # todo: value and saturation detection.
@@ -39,11 +45,11 @@ class LightPatternDetector:
             [1]:bounding rect
             [2]:hierarchy
         '''
-        if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        if self.debug_level>0:
             dbg_img=img.copy()
         nextCnt=[]
         for cnt in cnts:
-            if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+            if self.debug_level>50:
                 cv2.drawContours(dbg_img,[cnt[0]],-1,[0,0,0])
             # pick out 2nd level contours which overlap the previous detection
             if cnt[2][3] in rectIndices:
@@ -58,7 +64,7 @@ class LightPatternDetector:
             [0]:contour
             [1]:bounding rect
         '''
-        if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        if self.debug_level>0:
             cv2.imshow('lightbcn_output',dbg_img)
             cv2.waitKey(10)
         try:

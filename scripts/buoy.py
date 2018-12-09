@@ -15,20 +15,25 @@ class BuoyDetector:
         self.interest_region_width = 0.1
         self.toPrintContours = 0
         self.bnu20 = 1
+        if rospy.has_param("~debug_level") and rospy.get_param("~debug_level") == "full":
+            self.debug_level=101
+        elif rospy.has_param("~debug_buoy"):
+            if rospy.get_param("~debug_buoy") == "full":
+                self.debug_level=101
+            else:
+                self.debug_level=51
+        else:
+             self.debug_level=0
 
     def identify(self, img, filters, bearing=None):
-        if rospy.has_param('~debug_level'):
+        if self.debug_level > 0:
             dbg_img = img.copy()
         # apply a bunch of relevant filters to get contours
 
-
-        
         # for mapping colour names
         coldict = {
             'sat_green': 'green',
             'sat_red': 'red',
-            'sp_green': 'green',
-            'sp_red': 'red',
             'white': 'white',
             'black': 'black',
         }
@@ -48,7 +53,7 @@ class BuoyDetector:
             _cnt = cnts[col]
             #av=[cv2.contourArea(i) for i in _cnt]
             # print(av)
-            if rospy.has_param('~debug_level') and rospy.get_param('~debug_level') == 'full':
+            if self.debug_level>0:
                 _cnt = sorted(
                     _cnt, key=lambda i: cv2.contourArea(i), reverse=True)
             #av=[cv2.contourArea(i) for i in _cnt]
@@ -56,8 +61,7 @@ class BuoyDetector:
             for cnt in _cnt:
                 if rospy.has_param('~debug_level') and rospy.get_param('~debug_level') == 'full':
                     cv2.drawContours(dbg_img, [cnt], -1, [0, 0, 0])
-                # general noise removal shenanigans
-                # remove things with insignificant area
+
                 cA = cv2.contourArea(cnt)
                 if cA < 10:
                     continue
@@ -75,31 +79,39 @@ class BuoyDetector:
                     except:
                         pass
 
-                rect = cv2.minAreaRect(cnt)
-                recta = rect[1][0]*rect[1][1]
-                
-                ratio = 0.5
-                ratioError=1.0/3.0
-                rectangularity = 0.25
-                uprightness=20
 
-                if rospy.has_param('~debug_level') and rospy.get_param('~debug_level') == 'full':
+                # parameters
+                recta = rect[1][0]*rect[1][1]
+
+                ratio = 0.2
+                ratioError = 1.0/3.0
+                #rectangularity = 0.25
+                #angleLowerBound = -80
+                #angleUpperBound = -10
+                # https://stackoverflow.com/questions/15956124/minarearect-angles-unsure-about-the-angle-returned
+                if self.debug_level>100:
                     if (abs(rect[1][0]/rect[1][1]-ratio) < ratioError):
-                        cv2.drawContours(dbg_img, [cnt], -1, [255, 255, 0], 6) # cyan
-                    #if (abs(rect[2])<uprightness):
-                    #    cv2.drawContours(dbg_img, [cnt], -1, [255, 0, 0], 4) # blue
-                    if (abs(1-recta/cv2.contourArea(cnt))<rectangularity):
-                        cv2.drawContours(dbg_img, [cnt], -1, [255, 0, 255], 2) # purple
-                if (abs(rect[1][0]/rect[1][1]-ratio) < ratioError) and abs(1-recta/cv2.contourArea(cnt))<rectangularity: #and abs(rect[2])<uprightness:
+                        cv2.drawContours(
+                            dbg_img, [cnt], -1, [255, 255, 0], 6)  # cyan
+                        rospy.loginfo(rect[2])
+                    if rect[2]<angleLowerBound or rect[2]>angleUpperBound:
+                       cv2.drawContours(dbg_img, [cnt], -1, [255, 0, 0], 4) # blue
+                    #if (abs(1-recta/cv2.contourArea(cnt)) < rectangularity):
+                    #    cv2.drawContours(
+                    #        dbg_img, [cnt], -1, [255, 0, 255], 2)  # purple
+                if abs(rect[1][0]/rect[1][1]-ratio) < ratioError: # structured like this so we can easily toggle conditions
+                 #if abs(1-recta/cv2.contourArea(cnt)) < rectangularity:
+                   if rect[2]<angleLowerBound or rect[2]>angleUpperBound:
                     fullname = coldict[col]+' buoy'
-                    if rospy.has_param('~debug_level'):
+                    if self.debug_level>50:
                         cv2.drawContours(dbg_img, [cnt], -1, [0, 255, 0], 4)
-                        cv2.putText(dbg_img,fullname,(int(rect[0][0]),int(rect[0][1])),cv2.FONT_HERSHEY_SIMPLEX,1,[0,255,0])
+                        cv2.putText(dbg_img, str(rect), (int(rect[0][0]), int(
+                            rect[0][1])), cv2.FONT_HERSHEY_SIMPLEX, 0.2, [0, 255, 0])
                     if fullname in realItems:  # filter out obstacles that shouldnt exist
                         # filter based on bearing
                         IDs.append(
                             {"name": fullname, 'cx': cX, 'cnt': cnt, 'confidence': cv2.contourArea(cnt)})
-                        
+
                 """
                 recta = (rect[0][1]-rect[1][1])*(rect[0][0]-rect[1][0])
                 if (  # abs(1-cv2.contourArea(cnt)/recta)<0.1 and
@@ -137,11 +149,12 @@ class BuoyDetector:
             real_irw = self.interest_region_width*img_halfwidth
             _IDs = [i for i in IDs if abs(i['cx']-ROI_center) < real_irw]
             IDs = _IDs
-        if rospy.has_param('~debug_level'):
+        if self.debug_level>0:
             cv2.imshow('buoy_output', dbg_img)
             self.toPrintContours = cv2.waitKey(10)
 
         return IDs
+
 
 """ file only debugging still needs work
 import filters
@@ -152,7 +165,7 @@ if __name__=="__main__":
         flt=filters.FilterCacher()
         bd=BuoyDetector()
         for f in os.listdir(os.path.join(my_path,"cntdict_tst")):
-            
+
             testimg=cv2.imread(os.path.join(my_path,"cntdict_tst",f))
             flt.preprocess(testimg)
             #print(testimg)

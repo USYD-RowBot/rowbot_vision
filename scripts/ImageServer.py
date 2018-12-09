@@ -8,6 +8,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 import functools
 
+#import buoy_contour_match as buoy
 import buoy
 import lightbcn
 import shapes
@@ -91,17 +92,12 @@ class ImageServer():
         Returns:
             (types,confidences) -- an array of object types and confidences.
         """
-        ids=[]
-        for c in cameraOffsets:
-            _result = self.buoyDetector.identify(self.images[c], self.filters[c],bearing+cameraOffsets[c])
-            _result = [(i['shape'] + i['color']) for i in _result]
-            ids.append(_result)
-        
         types= []
         confidences= []
-        for id in ids:
-            types.append(id['name'])
-            confidences.append(id['confidence'])
+        for c in cameraOffsets:
+            _result = self.buoyDetector.identify(self.images[c], self.filters[c],bearing+cameraOffsets[c])
+            r=[types.append(i['name']) for i in _result]
+            r=[confidences.append(i['confidence']) for i in _result]
         return (types, confidences)
 
     def callback(self, name,data):

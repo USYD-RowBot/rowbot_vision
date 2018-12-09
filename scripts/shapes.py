@@ -9,6 +9,12 @@ class ShapeDetector:
     def __init__(self):
         self.max_angle=70
         self.interest_region_width=0.1
+        if rospy.has_param("~debug_level") and rospy.get_param("~debug_level") == "full":
+            self.debug_level=101
+        elif rospy.has_param("~debug_shape"):
+            self.debug_level=51
+        else:
+            self.debug_level=0
         pass
 
     def identify(self,img,filters,bearing=None):
@@ -35,10 +41,10 @@ class ShapeDetector:
         '''
         nextCnt = []
         IDs = []
-        if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        if self.debug_level>0:
             dbg_img=img.copy()
         for cnt in cnts:
-            if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+            if self.debug_level>50:
                 cv2.drawContours(dbg_img,[cnt[0]],-1,[0,0,0])
             # pick out 2nd level contours
             if cnt[2][3] in rectIndices:
@@ -86,7 +92,7 @@ class ShapeDetector:
             _IDs = [i for i in IDs if abs(i['cx']-ROI_center) < real_irw]
             IDs = _IDs
         # get the colours now.
-        if rospy.has_param('~debug_level') and rospy.get_param('~debug_level')=='full':
+        if self.debug_level>0:
             cv2.imshow('shapes_output',dbg_img)
             cv2.waitKey(10)
         return IDs
