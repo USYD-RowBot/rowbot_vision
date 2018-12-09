@@ -10,8 +10,9 @@ import functools
 
 #import buoy_contour_match as buoy
 import buoy
-import lightPattern as lightbcn 
+import lightbcn
 import shapes
+import filters
 """
 FUNCTIONS
 buoy.identify(image,bearing) Returns buoy classification with given bearing
@@ -31,15 +32,17 @@ class ImageServer():
     def __init__(self):
         self.bridge = CvBridge()
         self.camera_subs={}
+        self.filters={}
         self.images = {}
         for c in cameraOffsets:
             self.camera_subs[c]=rospy.Subscriber(
             c+"_camera/image_raw", Image, functools.partial(self.callback,c))
             rospy.loginfo("lambda is "+c)
+            self.filters[c]=filters.FilterCacher()
             self.images[c]=None
         self.last_time = rospy.get_time()
         self.buoyDetector = buoy.BuoyDetector()
-        self.lightDetector = lightbcn.LightDetector()
+        self.lightDetector = lightbcn.LightPatternDetector()
         self.lightDetectorEnabled=True
         self.shapeDetector = shapes.ShapeDetector()
         return
@@ -61,7 +64,7 @@ class ImageServer():
         Returns:
             array of string -- Array containing the current cached pattern.
         """
-        return self.lightDetector.recordedPatterns[len(self.lightDetector.recordedPatterns)-1]
+        return self.lightDetector.cachedPattern
 
     def classify_shape(self, bearing):
         """Classify a shape at a given bearing.
@@ -74,7 +77,7 @@ class ImageServer():
         """
         result = []
         for c in cameraOffsets:
-            _result = self.shapeDetector.identify(self.images[c])
+            _result = self.shapeDetector.identify(self.images[c], self.filters[c],bearing+cameraOffsets[c])
             _result = [(i['shape'] + i['color']) for i in _result]
             result.append(_result)
         return result
@@ -92,9 +95,9 @@ class ImageServer():
         types= []
         confidences= []
         for c in cameraOffsets:
-            _result = self.buoyDetector.identify(self.images[c],bearing+cameraOffsets[c])
-            [types.append(i['name']) for i in _result]
-            [confidences.append(i['confidence']) for i in _result]
+            _result = self.buoyDetector.identify(self.images[c], self.filters[c],bearing+cameraOffsets[c])
+            r=[types.append(i['name']) for i in _result]
+            r=[confidences.append(i['confidence']) for i in _result]
         return (types, confidences)
 
     def callback(self, name,data):
@@ -113,13 +116,14 @@ class ImageServer():
         new_w= int(width * 1)
         new_h= int(height * 1)
         self.images[name]= cv2.resize(self.image, (new_w, new_h))
+        self.filters[name].preprocess(self.image)
         if (self.lightDetectorEnabled):
-            self.lightDetector.identify(self.images[name])
+            self.lightDetector.identify(self.images[name],self.filters[name])
 
         if __name__ == "__main__" and name=="front": #when debugging
-            #rospy.loginfo(self.classify_shape(0))
+            rospy.loginfo(self.classify_shape(0))
             rospy.loginfo(self.classify_buoy(0))
-            #rospy.loginfo(self.lightDetector.identify(self.images["front"]))
+            rospy.loginfo(self.lightDetector.identify(self.images["front"],self.filters["front"]))
 
 
 if __name__ == "__main__":

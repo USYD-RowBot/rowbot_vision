@@ -9,11 +9,14 @@ import rospy
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 class LightPatternDetector:
-    def __init__(self):
-        if rospy.has_param("~debug_level") and rospy.get_param("~debug_level") == "full":
-            self.debug_level=101
-        elif rospy.has_param("~debug_pattern"):
-            self.debug_level=51
+    def __init__(self,file_based=False):
+        if not file_based:
+            if rospy.has_param("~debug_level") and rospy.get_param("~debug_level") == "full":
+                self.debug_level=101
+            elif rospy.has_param("~debug_pattern"):
+                self.debug_level=51
+            else:
+                self.debug_level=0
         else:
             self.debug_level=0
         self.cachedPattern=[]
@@ -94,23 +97,27 @@ class LightPatternDetector:
             rospy.loginfo("Light beacon: No Show")
             return 0
 
-#file debugging currently unavailable...
-
-"""
 debugMode="fromFile"
 if __name__=="__main__":
+    import filters
+    draw_colors={
+        "green":[0,255,0],
+        "blue":[255,0,0],
+        "red":[0,0,255]
+    }
+    ft=filters.FilterCacher()
     if debugMode=="fromFile":
-        lp=LightPatterner()
+        lp=LightPatternDetector(True)
         for f in os.listdir(os.path.join(my_path,"lb_tst")):
             print(f)
             testimg=cv2.imread(os.path.join(my_path,"lb_tst",f))
-            #print(testimg)
-            #r=lp.identify(testimg)
+            ft.preprocess(testimg)
+            lp.identify(testimg,ft)
+            r=lp.cachedPattern
+            h,w,chan=testimg.shape
             print(r)
-            # for id in r:
-            #     testimg=cv2.drawContours(testimg,[id['cnt']],0,(255,255,0),2)
-            #     cv2.putText(testimg,id['name'],(id['cnt'][0,0,0],id['cnt'][0,0,1]),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)
-            # cv2.imshow('result',testimg)
+            for (c,id) in enumerate(r):
+                cv2.rectangle(testimg,(c*w/10,h*9/10),((c+1)*w/10,h),draw_colors[id],-1)
+                #cv2.putText(testimg,id['name'],(id['cnt'][0,0,0],id['cnt'][0,0,1]),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)
+            cv2.imshow('result',testimg)
             cv2.waitKey(-1)
-            
-"""

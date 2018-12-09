@@ -79,11 +79,12 @@ class FilterCacher:
             # brite: relative saturation and value thresholding, to get rid of grey objects and darker objects.
             self.masks['brite'] = {'img': cv2.inRange(self.fimgs['s_hsv'], (0, np.max(
                 self.fimgs['s_hsv'][:, :, 1])*0.3, np.max(self.fimgs['s_hsv'][:, :, 2])*0.2), (180, 255, 255))}
-
+            # brite: relative saturation and value thresholding, to get rid of grey objects and darker objects.
+            self.masks['notcolor'] = {'img': cv2.inRange(self.fimgs['s_hsv'], (0, 0,0), (180, np.max(self.fimgs['s_hsv'][:,:,1])*0.15, 255))}
             # white and black self.masks
             # white: high value, low saturation
             self.masks['white'] = {'img': cv2.inRange(self.fimgs['s_hsv'], (0, 0, np.max(
-                self.fimgs['s_hsv'][:, :, 2])*0.9), (180, np.max(self.fimgs['s_hsv'][:, :, 1])*0.2, 255))}
+                self.fimgs['s_hsv'][:, :, 2])*0.7), (180, np.max(self.fimgs['s_hsv'][:, :, 1])*0.1, 255))}
             # black: low values
             self.masks['black'] = {'img': cv2.inRange(
                 self.fimgs['s_hsv'], (0, 0, 0), (180, 255, np.max(self.fimgs['s_hsv'][:, :, 2])*0.1))}
@@ -146,7 +147,7 @@ class FilterCacher:
 
 
 debugMode = "fromVideo"
-todraw = ['sp_green','sat_green','brite']
+todraw = ['notcolor']
 todraw_fimgs = ['bgr']
 if __name__ == "__main__":
     if debugMode == "fromFile":
