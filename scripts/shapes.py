@@ -45,9 +45,12 @@ class ShapeDetector:
         im,cnts,hier = cv2.findContours(notcolor, cv2.RETR_TREE,
                                 cv2.CHAIN_APPROX_SIMPLE)
         IDs=[]
+        
         for c in cnts:
             shape="weird"
             peri=cv2.arcLength(c, True)
+            if peri<img.shape[0]*img.shape[1]/10000:
+                break
             approx=cv2.approxPolyDP(c, 0.03 * peri, True)
             cA=cv2.contourArea(approx)
             if cA > 1 and (cv2.contourArea(c)/cA) < 0.95:
@@ -84,4 +87,5 @@ class ShapeDetector:
                     IDs.append({'area': cA, 'cnt': c, 'shape': shape,
                         'color': col, 'confidence': cA})
         IDs=sorted(IDs,key=lambda i: i['confidence'],reverse=True)
+        
         return IDs

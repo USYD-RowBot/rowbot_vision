@@ -117,9 +117,9 @@ class ImageServer():
             self.lightDetector.identify(self.images[name])
 
         if __name__ == "__main__" and name=="front": #when debugging
-            #rospy.loginfo(self.classify_shape(0))
+            rospy.loginfo(self.classify_shape(0))
             rospy.loginfo(self.classify_buoy(0))
-            #rospy.loginfo(self.lightDetector.identify(self.images["front"]))
+            rospy.loginfo(self.lightDetector.identify(self.images["front"]))
 
 
 if __name__ == "__main__":

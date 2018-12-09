@@ -28,7 +28,7 @@ class BuoyDetector:
             roi_end = int((bearing+self.params['roiAngularRange'])*img.shape[0]/self.params['cameraAngularRange']+img.shape[0]/2)
             roi_img = img[:,roi_start:roi_end, :]
             #print (((bearing-self.params['roiAngularRange']) /self.params['cameraAngularRange']),roi_end)
-            print (roi_img.shape, img.shape)
+            #print (roi_img.shape, img.shape)
         else:
             roi_img=img
         if (self.params['debugLevel']>100):
@@ -75,7 +75,7 @@ class BuoyDetector:
             #    cv2.imshow('buoyOut',roi_img)
         # sort results and pick most likely n.
         results=sorted(results,key=lambda i: i['confidence'],reverse=True)
-        print(results)
+        #print(results)
         if (self.params['debugLevel']>50):
             cv2.drawContours(roi_img,[c['contour'] for c in results],-1,[0,255,0],3)
             cv2.imshow('buoyOut',roi_img)
@@ -88,6 +88,4 @@ class BuoyDetector:
             return True
         return False
 
-if __name__ == "__main__":
-    bd=BuoyDetector()
-    print(bd)
+
