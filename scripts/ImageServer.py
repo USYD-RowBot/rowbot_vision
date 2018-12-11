@@ -24,7 +24,7 @@ shape.identify(image,bearing)
 cameraOffsets={
     #"left":-60,
     #"right":60,
-    "front":0
+    "front":5
 }
 
 class ImageServer():
@@ -79,7 +79,7 @@ class ImageServer():
             result.append(_result)
         return result
 
-    def classify_buoy(self, bearing=0, objInFront=False):
+    def classify_buoy(self, bearing=0, objInFront=False,debugName="derp"):
         """Call to classify a given buoy.
 
         Keyword Arguments:
@@ -92,9 +92,11 @@ class ImageServer():
         types= []
         confidences= []
         for c in cameraOffsets:
-            _result = self.buoyDetector.identify(self.images[c],bearing+cameraOffsets[c])
-            [types.append(i['name']) for i in _result]
-            [confidences.append(i['confidence']) for i in _result]
+            if not self.images[c] is None:
+                _result = self.buoyDetector.identify(self.images[c],bearing+cameraOffsets[c],debugName)
+                if not _result==False:
+                    [types.append(i['name']) for i in _result]
+                    [confidences.append(i['confidence']) for i in _result]
         return (types, confidences)
 
     def callback(self, name,data):

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find rowbot_description)/launch/description_bag.launch" />
+	
+	<node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+		<remap from="cloud_in" to="lidar/points" />
+		<remap from="scan" to="/scan" />
+		<rosparam>min_height: -1.5
+angle_increment: 0.00872664625
+range_max: 100.0
+range_min: 2.5
+angle_min: -2
+angle_max: 2
+use_inf: false</rosparam>
+	</node>
+	<node pkg="rowbot_navigation" type="mapping" name="mapping" />
+	<node name="odometry" pkg="rowbot_navigation" type="odom_to_tf.py" output="screen" />
+	<node name="obj_server_1" pkg="rowbot_vision" type="object_server.py" output="screen">
+		<param name="debugLevel" value="51" />
+	</node>
+	<node pkg="rviz" type="rviz" name="showy" respawn="false" output="screen" args="-d $(find rowbot_rviz)/rviz/baglidar.rviz" />
+	<!-- <include file="$(find rowbot_navigation)/launch/joy_control.launch"/> -->
+	<!-- <include file="$(find rowbot_rviz)/launch/viz.launch"/> -->
+</launch>

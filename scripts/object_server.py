@@ -6,7 +6,10 @@ import scipy.cluster.hierarchy as hcluster
 import numpy
 from nav_msgs.srv import GetMap
 from nav_msgs.msg import OccupancyGrid
+from visualization_msgs.msg import Marker
+from std_msgs.msg import Header, ColorRGBA
 from rowbot_vision.msg import ObjectArray, Object
+from geometry_msgs.msg import Pose, Vector3
 import math
 import random
 from objhelper.qhull_2d import *
@@ -15,9 +18,15 @@ import ImageServer
 
 M_PI = 3.14159265359
 
+obj_cols={
+    "red buoy":[1,0,0],
+    "green buoy":[0,1,0],
+    "white buoy":[1,1,1],
+}
+
 class Obstacle():
     """Obstacle Class containing information and functions for different detected Obstacles"""
-    def __init__(self,tf_broadcaster,tf_listener,image_server,object_server):
+    def __init__(self,tf_broadcaster,tf_listener,image_server,object_server,viz_broadcaster,viznumber):
         self.x = 0
         self.y = 0
         self.time = rospy.Time.now()
@@ -33,6 +42,8 @@ class Obstacle():
         self.best_guess_conf = 0
         self.object_server = object_server
         self.parent_frame = "map"
+        self.viznumber=viznumber
+        self.viz_broadcaster=viz_broadcaster
     def broadcast(self):
         """Broadcast the object via tf"""
         self.tf_broadcaster.sendTransform(
@@ -42,6 +53,43 @@ class Obstacle():
         self.object.frame_id,
         self.parent_frame
         )
+        # Also broadcast into rviz
+        if not self.viz_broadcaster is None:
+            marker = Marker()
+            h = Header()
+            h.frame_id=self.object.frame_id
+            h.stamp=rospy.Time.now()
+            marker.header=h
+            marker.ns = "buoys"
+            marker.id = self.viznumber
+            marker.type = 1
+            marker.action = 0
+            ps=Pose()
+            ps.position.x = 0
+            ps.position.y = 0
+            ps.position.z = 0
+            ps.orientation.x = 0.0
+            ps.orientation.y = 0.0
+            ps.orientation.z = 0.0
+            ps.orientation.w = 1.0
+            marker.pose=ps
+            marker.lifetime=rospy.Duration(3.0)
+            v3=Vector3()
+            v3.x = 1
+            v3.y = 1
+            v3.z = 1
+            marker.scale=v3
+            crba=ColorRGBA()
+            crba.a=1
+            try:
+                crba.r = obj_cols[self.object.best_guess][0]
+                crba.g = obj_cols[self.object.best_guess][1]
+                crba.b = obj_cols[self.object.best_guess][2]
+            except Exception:
+                pass
+            marker.color=crba
+            #only if using a MESH_RESOURCE marker type:
+            self.viz_broadcaster.publish(marker)
     def classify(self,conflicting):
         """Try classify the object using a variety of means"""
         #TODO If two objects have a similar bearing, don't classify it.
@@ -60,9 +108,12 @@ class Obstacle():
                 bearing= -math.degrees(math.atan2(trans[1], trans[0]))
                 #Classify using the camera.
                 if conflicting == False:
-                    rospy.loginfo("CLassifying buoy placholder")
                     result = False
-                    #result = self.image_server.classify_buoy(bearing,0)
+                    result = self.image_server.classify_buoy(bearing,0,self.object.frame_id)
+                    """ result = self.image_server.classify_buoy(0,0,"0")
+                    result = self.image_server.classify_buoy(-22.5,0,"-45")
+                    result = self.image_server.classify_buoy(22.5,0,"45") """
+                    print(str(result)," bearing: ",str(bearing),self.object.frame_id)
                 self.seen_by_camera = False
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
@@ -118,7 +169,6 @@ class Obstacle():
             self.rot =tf.transformations.quaternion_from_euler(0,0,rot_angle+1.5707)
         #TODO Find a way to keep orientation consistent. It still can be confused in 2 directions.
 
-
         #IF height/width < 3, then its a dock
 
         """Docking locations: corner_points:
@@ -133,7 +183,12 @@ class ObjectServer():
         self.tf_broadcaster = tf.TransformBroadcaster()
         self.tf_listener = tf.TransformListener()
         self.pub = rospy.Publisher("objects", ObjectArray)
+        if rospy.get_param("~debugLevel",0)>1:
+            self.viz_broadcaster = rospy.Publisher("visualization_marker", Marker)
+        else:
+            self.viz_broadcaster=None
         self.objects = []
+        self.viz_unique_no=0
         self.map = OccupancyGrid()
 
     def classify_objects(self):
@@ -194,6 +249,7 @@ class ObjectServer():
         count  = 0
         #print(my_map)
         #Put map into a list of points.
+        
         for i in my_map.data:
             if i > 70:
                 points_x.append(r*info.resolution)
@@ -203,7 +259,8 @@ class ObjectServer():
             if r == info.width:
                 r = 0
                 c = c +1
-
+        if len(my_map.data)==0:
+            return
         #Apply a distance Cluster on the objects.
         thresh = 3
         #print(my_data,thresh)
@@ -262,7 +319,8 @@ class ObjectServer():
                 #Append threw new object to the servers object list.
 
     def add_object(self,points,rad,x,y,frame_id,name):
-        my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server,self)
+        my_obj = Obstacle(self.tf_broadcaster, self.tf_listener, self.image_server,self,self.viz_broadcaster,self.viz_unique_no)
+        self.viz_unique_no=self.viz_unique_no+1
         my_obj.x = x
         my_obj.y = y
         my_obj.radius = rad
