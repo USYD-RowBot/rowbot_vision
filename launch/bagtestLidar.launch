@@ -16,7 +16,7 @@ use_inf: false</rosparam>
 	<node pkg="rowbot_navigation" type="mapping" name="mapping" />
 	<node name="odometry" pkg="rowbot_navigation" type="odom_to_tf.py" output="screen" />
 	<node name="obj_server_1" pkg="rowbot_vision" type="object_server.py" output="screen">
-		<param name="debugLevel" value="51" />
+		<param name="debugObject" value="1" />
 	</node>
 	<node pkg="rviz" type="rviz" name="showy" respawn="false" output="screen" args="-d $(find rowbot_rviz)/rviz/baglidar.rviz" />
 	<!-- <include file="$(find rowbot_navigation)/launch/joy_control.launch"/> -->

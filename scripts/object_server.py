@@ -183,7 +183,7 @@ class ObjectServer():
         self.tf_broadcaster = tf.TransformBroadcaster()
         self.tf_listener = tf.TransformListener()
         self.pub = rospy.Publisher("objects", ObjectArray)
-        if rospy.get_param("~debugLevel",0)>1:
+        if rospy.get_param("~debugObject",rospy.get_param("~debugLevel",0))>0:
             self.viz_broadcaster = rospy.Publisher("visualization_marker", Marker)
         else:
             self.viz_broadcaster=None
