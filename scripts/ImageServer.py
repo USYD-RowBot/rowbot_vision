@@ -22,8 +22,8 @@ lightbcn publishes a message, or runs inside imageServer and sets a variable.
 shape.identify(image,bearing)
 """
 cameraOffsets={
-    #"left":-60,
-    #"right":60,
+    "left":-55,
+    "right":65,
     "front":5
 }
 
@@ -35,7 +35,7 @@ class ImageServer():
         for c in cameraOffsets:
             self.camera_subs[c]=rospy.Subscriber(
             c+"_camera/image_raw", Image, functools.partial(self.callback,c))
-            rospy.loginfo("lambda is "+c)
+            #rospy.loginfo("lambda is "+c)
             self.images[c]=None
         self.last_time = rospy.get_time()
         self.buoyDetector = buoy.BuoyDetector()
@@ -93,14 +93,14 @@ class ImageServer():
         confidences= []
         for c in cameraOffsets:
             if not self.images[c] is None:
-                _result = self.buoyDetector.identify(self.images[c],bearing+cameraOffsets[c],debugName)
+                _result = self.buoyDetector.identify(self.images[c],bearing+cameraOffsets[c],debugName+"::"+c)
                 if not _result==False:
                     [types.append(i['name']) for i in _result]
                     [confidences.append(i['confidence']) for i in _result]
         return (types, confidences)
 
     def callback(self, name,data):
-        rospy.loginfo(name)
+        #rospy.loginfo(name)
         """Generic callback for storing the image (cached filter)
 
         Arguments:

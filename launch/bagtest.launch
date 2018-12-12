@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 	<node name="image_server_1" pkg="rowbot_vision" type="ImageServer.py" output="screen">
-		<param name="debugBuoy" value="100" />
+		<param name="debugLightPattern" value="100" />
 	</node>
 	<!-- <include file="$(find rowbot_navigation)/launch/joy_control.launch"/> -->
 	<!-- <include file="$(find rowbot_rviz)/launch/viz.launch"/> -->

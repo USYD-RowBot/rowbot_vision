@@ -2,6 +2,8 @@
 import rospy
 import cv2
 import numpy as np
+import os
+
 
 class BuoyDetector:
     def __init__(self):
@@ -11,7 +13,9 @@ class BuoyDetector:
             "roiAngularRange": 4,
             'debugLevel': 0,
             'debugBuoy':0,
-            'buoyTargetRatio':0.5
+            'buoyTargetRatio':0.5,
+            'debugTarget':'screen',
+            'outputDirectory':'buoyout//'
         }
         try:
             for i in self.params:
@@ -20,6 +24,19 @@ class BuoyDetector:
             pass
         self.params['debugLevel']=max(self.params['debugLevel'],self.params['debugBuoy'])
         pass
+
+    def debugImShow(self,name,img):
+        #print ("try")
+        if self.params['debugTarget']=='file':
+            try:
+                os.mkdir(self.params['outputDirectory'])
+            except Exception:
+                pass
+            cv2.imwrite(self.params['outputDirectory']+name+"::"+str(rospy.Time.now())+".png",img)
+            #print (__file__)
+            #print(self.params['outputDirectory']+'buoyout-'+name+str(rospy.Time.now())+".png")
+        else:
+            cv2.imshow(name,img)
 
     def identify(self, img, bearing,debugName):
         self.imshape=img.shape
@@ -40,7 +57,7 @@ class BuoyDetector:
             roi_img = img[:,roi_start:roi_end, :]
             #print (((bearing-self.params['roiAngularRange']) /self.params['cameraAngularRange']),roi_end)
             #print (roi_img.shape, img.shape)
-            print("bearing:",bearing,roi_start,roi_end)
+            #print("bearing:",bearing,roi_start,roi_end)
             #print("params:",rar,self.params['cameraAngularRange'],img.shape)
             #print("bits:",bearing-self.params['roiAngularRange'],((bearing-self.params['roiAngularRange'])*img.shape[1]),int(((bearing-self.params['roiAngularRange'])*img.shape[1])/self.params['cameraAngularRange']))
             #print("bits2:",bearing+self.params['roiAngularRange'],((bearing+self.params['roiAngularRange'])*img.shape[1]),int(((bearing+self.params['roiAngularRange'])*img.shape[1])/self.params['cameraAngularRange']))
@@ -52,9 +69,8 @@ class BuoyDetector:
             pass
         if (self.params['debugLevel']>0):
             dbg_img=roi_img.copy()
-        if (50<self.params['debugLevel']<70):
-            cv2.imshow(debugName, roi_img)
-            print (roi_img.shape)
+        if (50<self.params['debugLevel']):
+            self.debugImShow(debugName,dbg_img)
             
         # get filters
         hsv = cv2.cvtColor(roi_img, cv2.COLOR_BGR2HSV)
@@ -103,12 +119,13 @@ class BuoyDetector:
         # sort results and pick most likely n.
         results=sorted(results,key=lambda i: i['confidence'],reverse=True)
         #print(results)
-        if (self.params['debugLevel']>50):
+        if (self.params['debugLevel']>49):
             cv2.drawContours(dbg_img,[c['contour'] for c in results],-1,[0,255,0],3)
             for c in results:
                 cv2.putText(dbg_img, c['name']+":"+str(c['confidence']), (int(c['contour'][0][0][0]), int(
                     c['contour'][0][0][1])), cv2.FONT_HERSHEY_SIMPLEX,0.5, [0, 255, 0])
-            cv2.imshow(debugName+'out',dbg_img)
+            self.debugImShow(debugName,dbg_img)
+
         if (self.params['debugLevel']>0):
             cv2.waitKey(10)
         return results

@@ -9,7 +9,7 @@ from nav_msgs.msg import OccupancyGrid
 from visualization_msgs.msg import Marker
 from std_msgs.msg import Header, ColorRGBA
 from rowbot_vision.msg import ObjectArray, Object
-from geometry_msgs.msg import Pose, Vector3
+from geometry_msgs.msg import Pose, Vector3, Quaternion
 import math
 import random
 from objhelper.qhull_2d import *
@@ -54,6 +54,7 @@ class Obstacle():
         self.parent_frame
         )
         # Also broadcast into rviz
+        
         if not self.viz_broadcaster is None:
             marker = Marker()
             h = Header()
@@ -68,10 +69,7 @@ class Obstacle():
             ps.position.x = 0
             ps.position.y = 0
             ps.position.z = 0
-            ps.orientation.x = 0.0
-            ps.orientation.y = 0.0
-            ps.orientation.z = 0.0
-            ps.orientation.w = 1.0
+            ps.orientation=Quaternion(0,0,0,1)
             marker.pose=ps
             marker.lifetime=rospy.Duration(3.0)
             v3=Vector3()
@@ -89,7 +87,9 @@ class Obstacle():
                 pass
             marker.color=crba
             #only if using a MESH_RESOURCE marker type:
+            #print ("rviz mark",marker.pose.orientation)
             self.viz_broadcaster.publish(marker)
+        
     def classify(self,conflicting):
         """Try classify the object using a variety of means"""
         #TODO If two objects have a similar bearing, don't classify it.
@@ -113,7 +113,7 @@ class Obstacle():
                     """ result = self.image_server.classify_buoy(0,0,"0")
                     result = self.image_server.classify_buoy(-22.5,0,"-45")
                     result = self.image_server.classify_buoy(22.5,0,"45") """
-                    print(str(result)," bearing: ",str(bearing),self.object.frame_id)
+                    #print(str(result)," bearing: ",str(bearing),self.object.frame_id)
                 self.seen_by_camera = False
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
@@ -210,7 +210,7 @@ class ObjectServer():
             for key in my_info:
                 if i is key:
                     pass
-                elif my_info[key][0] > min_bearing and my_info[key][0] < max_bearing and my_info[key][1] < this_dist-0.5:
+                elif my_info[key][0] > min_bearing and my_info[key][0] < max_bearing: #and my_info[key][1] < this_dist-0.5:
                     conflicting = True
                     break
             i.classify(conflicting)
@@ -226,10 +226,10 @@ class ObjectServer():
     def cleanup(self):
         """Method to clean up any objects that are old"""
         expire_time = 3
-        print("Cleaning")
+        #print("Cleaning")
         for i in self.objects:
             time_diff = rospy.Time.now().secs - i.time.secs
-            print(i.object.frame_id, time_diff)
+            #print(i.object.frame_id, time_diff)
             if time_diff > expire_time:
                 rospy.logdebug("Removing expired Object")
                 self.objects.remove(i)
@@ -313,7 +313,7 @@ class ObjectServer():
                     break
             #If it is not close to any other objects then add it as a new object.
             if updated == False:
-                print("Adding new object")
+                #print("Adding new object")
                 frame_id = str(random.randint(1,10000))
                 self.add_object(clusters[cluster],max_dist,x,y,frame_id,frame_id)
                 #Append threw new object to the servers object list.
