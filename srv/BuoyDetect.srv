@@ -1,0 +1,7 @@
+sensor_msgs/Image image
+float64 bearing
+uint32 ObjInFront
+---
+sensor_msgs/Image mask
+string[] types
+float64[] confidences

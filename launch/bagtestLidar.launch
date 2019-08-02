@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find rowbot_description)/launch/description_bag.launch" />
+	<node pkg="rowbot_vision" type="clarity.sh" name="clarity">
+	</node>
+	<node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+		<remap from="cloud_in" to="lidar/points" />
+		<remap from="scan" to="/scan" />
+		<rosparam>min_height: -1.5
+angle_increment: 0.00872664625
+range_max: 100.0
+range_min: 2.5
+angle_min: -2
+angle_max: 2
+use_inf: false</rosparam>
+	</node>
+	<node pkg="rowbot_navigation" type="mapping" name="mapping" output="screen">
+		<param name="~width" value="1024"/>
+		<param name="~resolution" value="0.4"/>
+		<param name="~offset_x" value="60.0"/>
+		<param name="~offset_y" value="180.0"/>
+		<!--<param name="~offset_y" value="-346.0"/>-->
+	</node>
+	<!--<node name="odometry" pkg="rowbot_navigation" type="odom_to_tf.py" output="screen" />-->
+	<node name="obj_server_1" pkg="rowbot_vision" required="true" type="object_server.py" output="screen">
+		<param name="debugLevel" value="50" />
+		<param name="debugTarget" value="file" />
+	</node>
+	<!--Static tf for cameras to work -->
+	<node pkg="rviz" type="rviz" name="showy" respawn="false" required="true" output="screen" args="-d $(find rowbot_rviz)/rviz/baglidar.rviz" />
+	<!-- <include file="$(find rowbot_navigation)/launch/joy_control.launch"/> -->
+	<!-- <include file="$(find rowbot_rviz)/launch/viz.launch"/> -->
+	<!--<node pkg="rosbag" type="play" name="rosbag" args="/media/stevenliu/My\ Passport/robotx_10122018/deployment2/2/1/* -clock"/>-->
+	<node pkg="tf" type="static_transform_publisher" name="odom2map" args="0 0 0 0 0 0 1 map odom 30" />
+	<!--<node pkg="rowbot_mission_planner" type="demonstrate_navigation.py" name="grandmaster" output="screen"/>-->
+</launch>

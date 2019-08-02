@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find rowbot_description)/launch/description_bag.launch" />
+	
+	<node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+		<remap from="cloud_in" to="lidar/points" />
+		<remap from="scan" to="/scan" />
+		<rosparam>min_height: -1.5
+angle_increment: 0.00872664625
+range_max: 100.0
+range_min: 2.5
+angle_min: -2
+angle_max: 2
+use_inf: false</rosparam>
+	</node>
+	<node pkg="rowbot_navigation" type="mapping" name="mapping" />
+	<node name="odometry" pkg="rowbot_navigation" type="odom_to_tf.py" output="screen" />
+	<node name="camserver" pkg="rowbot_vision" required="true" type="cameraserver.py" output="screen">
+		<param name="debugLevel" value="50" />
+		<param name="debugTarget" value="file" />
+	</node>
+	<!--Static tf for cameras to work -->
+	<node pkg="rviz" type="rviz" name="showy" respawn="false" required="true" output="screen" args="-d $(find rowbot_rviz)/rviz/bagcamdar.rviz" />
+	<!-- <include file="$(find rowbot_navigation)/launch/joy_control.launch"/> -->
+	<!-- <include file="$(find rowbot_rviz)/launch/viz.launch"/> -->
+	<node pkg="rosbag" type="play" name="rosbag" args="/home/stevenliu/bagfiles/day2.bag --clock"/>
+</launch>

@@ -1,0 +1,3 @@
+<launch>
+	<node type="sim_obj_publisher.py" name="sop_field" pkg="rowbot_vision" output="screen" />
+</launch>
